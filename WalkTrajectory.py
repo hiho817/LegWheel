@@ -28,6 +28,8 @@ forward_distance = 2.0  # distance to walk
 swing_time = 0.2    # duty: 0.8~1.0
 duty = np.array([1-swing_time, 0.5-swing_time, 0.5, 0.0])   # initial duty, left front leg first swing
 # duty = np.array([0.5-swing_time, 1-swing_time, 0.0, 0.5])   # initial duty, right front leg first swing
+# duty = np.array([0.5-2*swing_time, 1-2*swing_time, 1-swing_time, 0.5-swing_time]) # initial duty, right hind leg first swing
+# duty = np.array([1-2*swing_time, 0.5-2*swing_time, 0.5-swing_time, 1-swing_time]) # initial duty, left hind leg first swing
 swing_phase = np.array([0, 0, 0, 0]) # initial phase, 0:stance, 1:swing
 hip = np.array([[BL/2, stand_height],
                 [BL/2, stand_height],
