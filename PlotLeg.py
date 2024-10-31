@@ -3,7 +3,6 @@ from LegModel import *
 import matplotlib.pyplot as plt
 from matplotlib.patches import Arc
 from matplotlib.lines import Line2D
-from Contact_Map import *
 from FittedCoefficient import *
 
 class LegAnimation(LegModel):
@@ -11,10 +10,7 @@ class LegAnimation(LegModel):
         super().__init__()
         self.forward(np.deg2rad(17), 0, vector=False)
         self.O = np.array([0, 0])   # origin of leg in world coordinate
-        self.contact_map = ContactMap()
-
         self.leg_shape = self.LegShape(self, self.O)   # initial pose of leg
-   
     
     ## Get Shape Of Leg ##  
     class LegShape:
