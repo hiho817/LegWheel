@@ -1,9 +1,13 @@
 import numpy as np
 import nlopt
-from bezier import *
 import time
 
-
+if __name__ == "__main__":
+    from bezier import *
+else:
+    from .bezier import *
+    
+    
 class SwingProfile:
     def __init__(self, L, h, dh, dL1, dL2, dL3, dL4, offset_x=0, offset_y=0, diff_h=0):
         self.L = L

@@ -1,10 +1,10 @@
 import numpy as np
-import LegModel
 import matplotlib.pyplot as plt
 from matplotlib.patches import Arc
 from matplotlib.lines import Line2D
-from FittedCoefficient import *
 import time
+import LegModel
+from FittedCoefficient import *
 
 class LegAnimation(LegModel.LegModel):
     def __init__(self):

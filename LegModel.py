@@ -1,7 +1,7 @@
 import numpy as np
-from FittedCoefficient import *
 from scipy.optimize import fsolve
 import time
+from FittedCoefficient import *
 
 #### To Do ####
 

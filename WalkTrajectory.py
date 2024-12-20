@@ -2,46 +2,74 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import Circle
 from matplotlib.animation import FuncAnimation
-import PlotLeg
 import LegModel
+import PlotLeg
 from utils import *
-import sys
-sys.path.append('bezier')
-import swing
+from bezier import swing
 
 leg_model = LegModel.LegModel(sim=True)
 
-# User-defined parameters #
+#### User-defined parameters ####
 animate = True  # create animate file
 output_file_name = 'walk_trajectory'
+transform = False   # tramsform to initial configuration before first command
 BL = 0.444  # body length, 44.4 cm
 BH = 0.2     # body height, 20 cm
 CoM_bias = 0.0    # x bias of center of mass
 velocity = 0.2     # velocity of hip, meter per second
-sampling = 400            # sampling rate, how many commands to one motor per second.
+sampling = 1000    # sampling rate, how many commands to one motor per second.
 stand_height = 0.25 + leg_model.r
-step_length = 0.4
+step_length = 0.35
 step_height = 0.04
-forward_distance = 2.0  # distance to walk
+forward_distance = 1.0  # distance to walk
 
-# Dependent parameters #
+# Use self-defined initial configuration
+use_init_phi = True
+init_phi_r = np.array([13.849, 8.5311, 13.88, 14.242]) # initial phi_r: A, B, C, D
+init_phi_l = np.array([10.747, 5.0024, 10.858, 11.24]) # initial phi_l: A, B, C, D
+init_theta =  (init_phi_r - init_phi_l)/2 + np.deg2rad(17)
+init_beta  = -(init_phi_r + init_phi_l)/2
+
+
+#### Dependent parameters ####
 swing_time = 0.2    # duty: 0.8~1.0
-duty = np.array([1-swing_time, 0.5-swing_time, 0.5, 0.0])   # initial duty, left front leg first swing
-# duty = np.array([0.5-swing_time, 1-swing_time, 0.0, 0.5])   # initial duty, right front leg first swing
-# duty = np.array([0.5-2*swing_time, 1-2*swing_time, 1-swing_time, 0.5-swing_time]) # initial duty, right hind leg first swing
-# duty = np.array([1-2*swing_time, 0.5-2*swing_time, 0.5-swing_time, 1-swing_time]) # initial duty, left hind leg first swing
+# Get foothold in hip coordinate from initial configuration
+relative_foothold = np.zeros((4, 2))
+for i in range(4):
+    leg_model.forward(init_theta[i], init_beta[i])
+    relative_foothold[i, 0] += leg_model.G[0]
+    relative_foothold[i, 1] = -stand_height
+# Get initial leg duty  
+first_swing_leg = np.argmin(relative_foothold[:, 0])
+if (not use_init_phi) or (first_swing_leg==0):
+    duty = np.array([1-swing_time, 0.5-swing_time, 0.5, 0.0])   # initial duty, left front leg first swing
+elif first_swing_leg==1:
+    duty = np.array([0.5-swing_time, 1-swing_time, 0.0, 0.5])   # initial duty, right front leg first swing
+elif first_swing_leg==2:
+    duty = np.array([0.5-2*swing_time, 1-2*swing_time, 1-swing_time, 0.5-swing_time]) # initial duty, right hind leg first swing
+elif first_swing_leg==3:
+    duty = np.array([1-2*swing_time, 0.5-2*swing_time, 0.5-swing_time, 1-swing_time]) # initial duty, left hind leg first swing
 swing_phase = np.array([0, 0, 0, 0]) # initial phase, 0:stance, 1:swing
+# Get foothold in world coordinate
 hip = np.array([[BL/2, stand_height],
                 [BL/2, stand_height],
                 [-BL/2, stand_height],
                 [-BL/2, stand_height]])
-foothold = np.array([hip[0] + [-step_length/2*(1-swing_time), -stand_height],
-                    hip[0] + [step_length/8*(1-swing_time), -stand_height],
-                    hip[2] + [-step_length/8*(1-swing_time), -stand_height],
-                    hip[2] + [step_length/2*(1-swing_time), -stand_height]])
+if use_init_phi:
+    foothold = np.array([hip[0] + relative_foothold[0],   # initial leg configuration
+                        hip[0] + relative_foothold[1],
+                        hip[2] + relative_foothold[2],
+                        hip[2] + relative_foothold[3]])
+else:
+    foothold = np.array([hip[0] + [-step_length/2*(1-swing_time), -stand_height],   # initial leg configuration, left front leg first swing
+                        hip[0] + [step_length/8*(1-swing_time), -stand_height],
+                        hip[2] + [-step_length/8*(1-swing_time), -stand_height],
+                        hip[2] + [step_length/2*(1-swing_time), -stand_height]])
 foothold += np.array([[CoM_bias, 0]])
+# Increment per one sample
 dS = velocity/sampling    # hip traveling distance per one sample
-incre_duty = dS / step_length
+incre_duty = dS / step_length   # duty increment per one sample
+
 
 #### Walk ####
 # Initial stored data
@@ -112,7 +140,8 @@ while traveled_distance <= forward_distance:
 theta_list = np.array(theta_list)
 beta_list = np.array(beta_list)
 hip_list = np.array(hip_list)
-create_command_csv(theta_list, -beta_list, output_file_name, transform=False)
+create_command_csv_theta_beta(theta_list, beta_list, output_file_name, transform=transform)
+# create_command_csv(theta_list, -beta_list, output_file_name, transform=transform)
 
 if animate:
     fps = 10
@@ -130,21 +159,18 @@ if animate:
         
         #### Plot ####
         ax.set_aspect('equal')  # 座標比例相同
-        ax.set_xlim(-0.5, 1.0)
+        ax.set_xlim(-0.4, 1.1)
         ax.set_ylim(-0.1, 0.5)
         
         # Ground
         # Whole Terrain
-        plt.plot([-0.5, 1], [0, 0], 'g-') # hip trajectory on the stair
+        plt.plot([-0.4, 1.1], [0, 0], 'g-') # hip trajectory on the stair
         plt.grid(True)
         
         
         plt.plot(*(( hip_list[0, frame*divide]+ hip_list[2, frame*divide])/2), 'P', color="orange", ms=10, mec='k') # center of mass    
         for i in range(4):
-            ax = Animation.plot_one(theta_list[i, frame*divide], beta_list[i, frame*divide], hip_list[i, frame*divide, :], ax)
+            ax = Animation.plot_leg(theta_list[i, frame*divide], beta_list[i, frame*divide], hip_list[i, frame*divide, :], ax)
 
     ani = FuncAnimation(fig, plot_update, frames=number_command//divide)
-    ani.save(output_file_name + ".mp4", fps=fps)
-
-    
-    
+    ani.save(output_file_name + ".gif", fps=fps)
