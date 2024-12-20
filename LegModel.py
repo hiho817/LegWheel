@@ -199,6 +199,7 @@ class LegModel:
     #                               single value input: 1 (complex number, real for x, imag for y)
     # Rim: the rim contacting ground of the corresponding theta and beta.
     # Alpha: alpha=0 when (theta, beta)=(17, 0). alpha=-2pi~2pi when lower or upper rim contact. alpha=alpha_G when G contact.
+    # Height: distance between ground and hip.
     def contact_map(self, theta, beta, slope=0):
         beta = np.array(beta) - slope
         self.forward(theta, beta, vector=False)
@@ -226,6 +227,7 @@ class LegModel:
 
         self.rim = np.where(np.min(arc_list[:, 0], axis=0) == 0, 0, np.argmin(arc_list[:, 0], axis=0) + 1)
         self.alpha = arc_list[self.rim-1, 1] if self.n_elements == 0 else arc_list[self.rim-1, 1, np.arange(self.n_elements)]
+        self.height = abs(arc_list[self.rim-1, 0]) if self.n_elements == 0 else abs(arc_list[self.rim-1, 0, np.arange(self.n_elements)])
 
     # Get lowest point and the corresponding alpha value of the rim
     def arc_min(self, p1, p2, O, rim): # alpha: arc starting from most clockwise (most left) of the rim
