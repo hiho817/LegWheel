@@ -269,7 +269,7 @@ class LegModel:
     # Input joint: 'G', 'Ul', 'Ur', 'Ll' or 'Lr', indicating pos is position of this joint.
     # Input forward: True means using forward kinematics to get all other joint positions after get theta and beta,
     #                   and storing theta and beta. Otherwise, just return theta and beta.
-    def inverse(self, pos, joint='G', forward=True):
+    def inverse(self, pos, joint='G'):
         abs_pos = np.linalg.norm(pos)
         if joint == 'G':
             theta = inv_G_dist_poly(abs_pos)
@@ -294,8 +294,7 @@ class LegModel:
             beta = np.angle( (pos[0] + 1j*pos[1]) / (L_x_beta0 + 1j*L_y_beta0))
         else:
             raise RuntimeError("joint need to be 'G', 'Ul', 'Ur', 'Ll' or 'Lr.")
-        if forward:
-            self.forward(theta, beta)
+        
         return theta, beta
 
 
@@ -322,7 +321,6 @@ class LegModel:
         d_theta, d_beta = result
         self.theta += d_theta
         self.beta  += d_beta
-        self.forward(self.theta, self.beta)
         return self.theta, self.beta
 
     # Objective function for move

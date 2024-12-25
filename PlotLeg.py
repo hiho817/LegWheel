@@ -187,8 +187,8 @@ if __name__ == '__main__':
     ax = LegAnimation.plot_by_rim([0.6, 0.1], [0.5, 0.2], rim='lower', ax=ax)
     ax = LegAnimation.plot_by_rim([0.3, 0.1], [0.4, 0.2], rim='lower', ax=ax)
     LegAnimation.setting(mark_size=10, line_width=3)
-    ax = LegAnimation.plot_by_rim([0.9, 0.0], [1.0, 0.12], rim='upper', ax=ax)
-    ax = LegAnimation.plot_by_rim([1.1, 0.0], [1.0, 0.12], rim='upper', ax=ax)
+    ax = LegAnimation.plot_by_rim([0.8, 0.0], [0.9, 0.12], rim='upper', ax=ax)
+    ax = LegAnimation.plot_by_rim([1.0, 0.0], [0.9, 0.12], rim='upper', ax=ax)
     ax.grid()
     
     plt.savefig(file_name + '.png')
