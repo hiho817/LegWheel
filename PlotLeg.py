@@ -7,8 +7,8 @@ import LegModel
 from FittedCoefficient import *
 
 class LegAnimation(LegModel.LegModel):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, sim=True):
+        super().__init__(sim=sim)
         self.forward(np.deg2rad(17), 0, vector=False)
         self.O = np.array([0, 0])   # origin of leg in world coordinate
         self.leg_shape = self.LegShape(self, self.O)   # initial pose of leg
@@ -156,21 +156,17 @@ class LegAnimation(LegModel.LegModel):
         O = np.array(O)
         foothold = np.array(foothold)
         if rim == 'G':
-            leg_length = np.linalg.norm(foothold - O + np.array([0, self.r]))
-            theta = np.polyval(inv_G_dist_coef, leg_length)
-            beta = np.angle( (foothold[0]-O[0] + 1j*(foothold[1]-O[1])) / -1j)
+            theta, beta = self.inverse(foothold - O + np.array([0, self.r]), 'G')
         elif rim == 'lower':
-            O2 = foothold - O + np.array([0, self.radius])
-            theta = np.polyval(inv_L_dist_coef, np.linalg.norm(O2))
-            O2_x_beta0 = np.polyval(L_x_coef, theta)
-            O2_y_beta0 = np.polyval(L_y_coef, theta)
-            beta = np.angle( (O2[0] + 1j*O2[1]) / (O2_x_beta0 + 1j*O2_y_beta0))
+            if foothold[0] > O[0]:  # left lower rim
+                theta, beta = self.inverse(foothold - O + np.array([0, self.radius]), 'Ll')
+            else:                   # right lower rim
+                theta, beta = self.inverse(foothold - O + np.array([0, self.radius]), 'Lr')
         elif rim == 'upper':
-            O1 = foothold - O + np.array([0, self.radius])
-            theta = np.polyval(inv_U_dist_coef, np.linalg.norm(O1))
-            O1_x_beta0 = np.polyval(U_x_coef, theta)
-            O1_y_beta0 = np.polyval(U_y_coef, theta)
-            beta = np.angle( (O1[0] + 1j*O1[1]) / (O1_x_beta0 + 1j*O1_y_beta0))
+            if foothold[0] > O[0]:  # left lower rim
+                theta, beta = self.inverse(foothold - O + np.array([0, self.radius]), 'Ul')
+            else:                   # right lower rim
+                theta, beta = self.inverse(foothold - O + np.array([0, self.radius]), 'Ur')
             
         if ax is None:
             fig, ax = plt.subplots()
@@ -186,11 +182,13 @@ if __name__ == '__main__':
     
     LegAnimation = LegAnimation()  # rad
     ax = LegAnimation.plot_by_angle()
-    ax = LegAnimation.plot_by_angle(np.deg2rad(130), np.deg2rad(45), [0., 0.3], ax=ax)
-    ax = LegAnimation.plot_by_rim([0.3, 0.0], [0.2, 0.3], rim='G', ax=ax)
-    ax = LegAnimation.plot_by_rim([0.6, 0.0], [0.5, 0.2], rim='lower', ax=ax)
+    ax = LegAnimation.plot_by_angle(np.deg2rad(130), np.deg2rad(-45), [0., 0.3], ax=ax)
+    ax = LegAnimation.plot_by_rim([0.2, 0.0], [0.1, 0.3], rim='G', ax=ax)
+    ax = LegAnimation.plot_by_rim([0.6, 0.1], [0.5, 0.2], rim='lower', ax=ax)
+    ax = LegAnimation.plot_by_rim([0.3, 0.1], [0.4, 0.2], rim='lower', ax=ax)
     LegAnimation.setting(mark_size=10, line_width=3)
-    ax = LegAnimation.plot_by_rim([0.8, 0.0], [0.7, 0.1], rim='upper', ax=ax)
+    ax = LegAnimation.plot_by_rim([0.9, 0.0], [1.0, 0.12], rim='upper', ax=ax)
+    ax = LegAnimation.plot_by_rim([1.1, 0.0], [1.0, 0.12], rim='upper', ax=ax)
     ax.grid()
     
     plt.savefig(file_name + '.png')
