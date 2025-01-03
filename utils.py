@@ -16,8 +16,8 @@ def create_command_csv(theta_command, beta_command, file_name, transform=True): 
         tramsform_r = []
         tramsform_l = []
         for i in range(4):
-            tramsform_r.append( np.hstack((np.linspace(0, phi_r[i, 0], 2000), phi_r[i, 0]*np.ones(500))) )  # finally 4*m
-            tramsform_l.append( np.hstack((np.linspace(0, phi_l[i, 0], 2000), phi_l[i, 0]*np.ones(500))) )
+            tramsform_r.append( np.hstack((np.linspace(0, phi_r[i, 0], 5000), phi_r[i, 0]*np.ones(2000))) )  # finally 4*m
+            tramsform_l.append( np.hstack((np.linspace(0, phi_l[i, 0], 5000), phi_l[i, 0]*np.ones(2000))) )
         phi_r = np.hstack((tramsform_r, phi_r))
         phi_l = np.hstack((tramsform_l, phi_l))
 
@@ -41,8 +41,8 @@ def create_command_csv_theta_beta(theta_command, beta_command, file_name, transf
         tramsform_theta = []
         tramsform_beta = []
         for i in range(4):
-            tramsform_theta.append( np.hstack((np.linspace(np.deg2rad(17), theta_command[i, 0], 2000), theta_command[i, 0]*np.ones(500))) )  # finally 4*m
-            tramsform_beta.append( np.hstack((np.linspace(0, beta_command[i, 0], 2000), beta_command[i, 0]*np.ones(500))) )
+            tramsform_theta.append( np.hstack((np.linspace(np.deg2rad(17), theta_command[i, 0], 5000), theta_command[i, 0]*np.ones(2000))) )  # finally 4*m
+            tramsform_beta.append( np.hstack((np.linspace(0, beta_command[i, 0], 5000), beta_command[i, 0]*np.ones(2000))) )
         theta_command = np.hstack((tramsform_theta, theta_command))
         beta_command = np.hstack((tramsform_beta, beta_command))
 

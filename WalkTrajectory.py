@@ -7,24 +7,25 @@ import PlotLeg
 from utils import *
 from bezier import swing
 
-leg_model = LegModel.LegModel(sim=True)
+sim = False
+leg_model = LegModel.LegModel(sim=sim)
 
 #### User-defined parameters ####
 animate = True  # create animate file
 output_file_name = 'walk_trajectory'
-transform = False   # tramsform to initial configuration before first command
+transform = True   # tramsform to initial configuration before first command
 BL = 0.444  # body length, 44.4 cm
 BH = 0.2     # body height, 20 cm
 CoM_bias = 0.0    # x bias of center of mass
-velocity = 0.2     # velocity of hip, meter per second
+velocity = 0.1     # velocity of hip, meter per second
 sampling = 1000    # sampling rate, how many commands to one motor per second.
-stand_height = 0.25 + leg_model.r
-step_length = 0.35
-step_height = 0.04
-forward_distance = 1.0  # distance to walk
+stand_height = 0.2 + leg_model.r
+step_length = 0.4
+step_height = 0.06
+forward_distance = 2.0  # distance to walk
 
 # Use self-defined initial configuration
-use_init_phi = True
+use_init_phi = False
 init_phi_r = np.array([13.849, 8.5311, 13.88, 14.242]) # initial phi_r: A, B, C, D
 init_phi_l = np.array([10.747, 5.0024, 10.858, 11.24]) # initial phi_l: A, B, C, D
 init_theta =  (init_phi_r - init_phi_l)/2 + np.deg2rad(17)
@@ -114,6 +115,7 @@ while traveled_distance <= forward_distance:
             swing_phase[i] = 1
             foothold[i] = [hip[i][0], 0] + ((1-swing_time)/2+swing_time)*np.array([step_length, 0])
             # Bezier curve for swing phase
+            leg_model.forward(theta_list[i][-1], beta_list[i][-1])
             p_lo = hip[i] + leg_model.G # G position when leave ground
             # calculate contact rim when touch ground
             for j in [0, 1, 3]: # G, Ll, Rl
@@ -149,7 +151,7 @@ if animate:
     fig_size = 10
     fig, ax = plt.subplots( figsize=(fig_size, fig_size) )
 
-    Animation = PlotLeg.LegAnimation()
+    Animation = PlotLeg.LegAnimation(sim=sim)
     Animation.setting()
         
     number_command = theta_list.shape[1]
