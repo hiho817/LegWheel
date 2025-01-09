@@ -280,18 +280,18 @@ class LegModel:
         if joint == 'G':
             theta = inv_G_dist_poly(abs_pos)
             beta = np.angle( (pos[0] + 1j*pos[1]) / -1j*abs_pos)
-        elif joint in ['Ul', 'Ur']:
+        elif joint in ['U_l', 'U_r']:
             theta = inv_U_dist_poly(abs_pos)
-            if joint == 'Ul':
+            if joint == 'U_l':
                 U_x_beta0 = U_l_poly[0](theta)
                 U_y_beta0 = U_l_poly[1](theta)
             else:   # Ur
                 U_x_beta0 = U_r_poly[0](theta)
                 U_y_beta0 = U_r_poly[1](theta)               
             beta = np.angle( (pos[0] + 1j*pos[1]) / (U_x_beta0 + 1j*U_y_beta0))
-        elif joint in ['Ll', 'Lr']:
+        elif joint in ['L_l', 'L_r']:
             theta = inv_L_dist_poly(abs_pos)
-            if joint == 'Ll':
+            if joint == 'L_l':
                 L_x_beta0 = L_l_poly[0](theta)
                 L_y_beta0 = L_l_poly[1](theta)
             else:   # Lr
@@ -299,7 +299,7 @@ class LegModel:
                 L_y_beta0 = L_r_poly[1](theta)               
             beta = np.angle( (pos[0] + 1j*pos[1]) / (L_x_beta0 + 1j*L_y_beta0))
         else:
-            raise RuntimeError("joint need to be 'G', 'Ul', 'Ur', 'Ll' or 'Lr.")
+            raise RuntimeError("joint need to be 'G', 'U_l', 'U_r', 'L_l' or 'L_r.")
         
         return theta, beta
 
@@ -443,14 +443,14 @@ if __name__ == '__main__':
     print("==========Inverse for U_l==========")
     Ul_p = [-0.01, -0.015]
     print("Input U_l:", Ul_p)
-    legmodel.inverse(Ul_p, 'Ul')
+    legmodel.inverse(Ul_p, 'U_l')
     print("Output theta, beta (degree):", np.rad2deg(legmodel.theta), np.rad2deg(legmodel.beta))
     print("Output U_l:", legmodel.U_l)
     # inverse for right lower rim
     print("==========Inverse for L_r==========")
     Lr_p = [-0.01, -0.015]
     print("Input L_r:", Lr_p)
-    legmodel.inverse(Lr_p, 'Lr')
+    legmodel.inverse(Lr_p, 'L_r')
     print("Output theta, beta (degree):", np.rad2deg(legmodel.theta), np.rad2deg(legmodel.beta))
     print("Output L_r:", legmodel.L_r)
 
