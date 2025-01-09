@@ -206,7 +206,7 @@ class LegModel:
 
         # points on the outside of the wheel
         G_l = (self.G - self.L_l)   / self.R * self.radius + self.L_l
-        G_r = (self.G - self.L_r) / self.R * self.radius + self.L_r
+        G_r = (self.G - self.L_r)   / self.R * self.radius + self.L_r
         H_l = (self.H_l - self.U_l) / self.R * self.radius + self.U_l
         H_r = (self.H_r - self.U_r) / self.R * self.radius + self.U_r
         F_l = (self.F_l - self.U_l) / self.R * self.radius + self.U_l
@@ -214,7 +214,7 @@ class LegModel:
         
         # minimum point and its alpha of each arc 
         self.n_elements = 0 if self.theta.ndim == 0 else self.theta.shape[0]  # amount of theta given in an array, 0: single value.
-        zeros = (0, 0) if self.n_elements == 0 else (np.zeros(self.n_elements), np.zeros(self.n_elements))
+        zeros = (0, 0, 0) if self.n_elements == 0 else (np.zeros(self.n_elements), np.zeros(self.n_elements), np.zeros(self.n_elements))
         arc_list = [
             self.arc_min(H_l, F_l, self.U_l, 'left upper'),
             self.arc_min(F_l, G_l, self.L_l, 'left lower'),
@@ -228,11 +228,15 @@ class LegModel:
         self.rim = np.where(np.min(arc_list[:, 0], axis=0) == 0, 0, np.argmin(arc_list[:, 0], axis=0) + 1)
         self.alpha = arc_list[self.rim-1, 1] if self.n_elements == 0 else arc_list[self.rim-1, 1, np.arange(self.n_elements)]
         self.height = abs(arc_list[self.rim-1, 0]) if self.n_elements == 0 else abs(arc_list[self.rim-1, 0, np.arange(self.n_elements)])
-
+        x_p = arc_list[self.rim-1, 2] if self.n_elements == 0 else arc_list[self.rim-1, 2, np.arange(self.n_elements)]
+        self.contact_p = np.hstack((x_p, -self.height)) if self.n_elements == 0 else np.hstack((x_p.reshape(-1, 1), -self.height.reshape(-1, 1)))
+            
     # Get lowest point and the corresponding alpha value of the rim
     def arc_min(self, p1, p2, O, rim): # alpha: arc starting from most clockwise (most left) of the rim
         lowest_points = np.array(.0) if self.n_elements == 0 else np.zeros(self.n_elements)
         alpha         = np.array(.0) if self.n_elements == 0 else np.zeros(self.n_elements)
+        x_points      = np.array(.0) if self.n_elements == 0 else np.zeros(self.n_elements) # x coordinate of contact point
+        
         # mapping alpha from 0~130/50 to -2*pi~2*pi
         if rim == 'left upper':
             bias_alpha = -np.deg2rad(180)
@@ -252,16 +256,18 @@ class LegModel:
         
         cal_err = 0.000000001
         in_range = ((p2 - O).real >= -cal_err) & ((p1 - O).real <= cal_err)    # lowest point is between 2 endpoints
-        lowest_points[in_range] = O[in_range].imag - self.radius
+        lowest_points[in_range] = O[in_range].imag - self.r if rim == 'G' else O[in_range].imag - self.radius
         alpha[in_range] = np.angle( -1j/(p1[in_range] - O[in_range]) )
+        x_points[in_range] = O[in_range].real
         
         p1_out = p1[~in_range]  # lowest point is one of 2 endpoints
         p2_out = p2[~in_range]  # lowest point is one of 2 endpoints
         O_out = O[~in_range]    # lowest point is one of 2 endpoints
         smaller = np.where(p1_out.imag < p2_out.imag, p1_out, p2_out)   # smaller y value of 2 endpoints
         lowest_points[~in_range] = 1.0    # if not normal contact, set very large
+        x_points[~in_range] = 0.0         # if not normal contact, set as 0
         alpha[~in_range] = np.angle( (smaller - O_out) / (p1_out - O_out) )
-        return lowest_points, alpha + bias_alpha  
+        return lowest_points, alpha + bias_alpha, x_points
     
     
     #### Inverse kinematics ####
@@ -295,8 +301,6 @@ class LegModel:
         else:
             raise RuntimeError("joint need to be 'G', 'Ul', 'Ur', 'Ll' or 'Lr.")
         
-        self.theta = theta
-        self.beta = beta
         return theta, beta
 
 
@@ -399,6 +403,7 @@ if __name__ == '__main__':
     legmodel.contact_map(theta, beta)
     print("Output rim with single value input:", legmodel.rim)
     print("Output alpha with single value input:", legmodel.alpha)
+    print("Output contact_p with single value input:", legmodel.contact_p)
     # input array with 1 element
     print("==========1 Element Array Input==========")
     theta = np.array([theta])
@@ -408,6 +413,7 @@ if __name__ == '__main__':
     legmodel.contact_map(theta, beta)
     print("Output rim with 1 element array input:", legmodel.rim)
     print("Output alpha with 1 element array input:", legmodel.alpha)
+    print("Output contact_p with 1 element array input:", legmodel.contact_p)
     # input array with n elements
     print("==========n Elements Array Input==========")
     theta = np.linspace(17, 160, 3)
@@ -419,6 +425,7 @@ if __name__ == '__main__':
     legmodel.contact_map(theta, beta)
     print("Output rim with n elements array input:", legmodel.rim)
     print("Output alpha with n elements array input:", legmodel.alpha)
+    print("Output contact_p with n elements array input:", legmodel.contact_p)
 
     #### Inverse kinematics ####
     print("\n")
@@ -429,24 +436,21 @@ if __name__ == '__main__':
     print("==========Inverse for G==========")
     G_p = [0.05, -0.25]
     print("Input G:", G_p)
-    theta, beta = legmodel.inverse(G_p, 'G')  # can also use " theta, beta = legmodel.inverse(G_p, 'G') "
-    legmodel.forward(theta, beta)
+    legmodel.inverse(G_p, 'G')  # can also use " theta, beta = legmodel.inverse(G_p, 'G') "
     print("Output theta, beta (degree):", np.rad2deg(legmodel.theta), np.rad2deg(legmodel.beta))
     print("Output G:", legmodel.G)
     # inverse for left upper rim
     print("==========Inverse for U_l==========")
     Ul_p = [-0.01, -0.015]
     print("Input U_l:", Ul_p)
-    theta, beta = legmodel.inverse(Ul_p, 'Ul')
-    legmodel.forward(theta, beta)
+    legmodel.inverse(Ul_p, 'Ul')
     print("Output theta, beta (degree):", np.rad2deg(legmodel.theta), np.rad2deg(legmodel.beta))
     print("Output U_l:", legmodel.U_l)
     # inverse for right lower rim
     print("==========Inverse for L_r==========")
     Lr_p = [-0.01, -0.015]
     print("Input L_r:", Lr_p)
-    theta, beta = legmodel.inverse(Lr_p, 'Lr')
-    legmodel.forward(theta, beta)
+    legmodel.inverse(Lr_p, 'Lr')
     print("Output theta, beta (degree):", np.rad2deg(legmodel.theta), np.rad2deg(legmodel.beta))
     print("Output L_r:", legmodel.L_r)
 
@@ -456,8 +460,8 @@ if __name__ == '__main__':
     print("****** Move example ******")
     print("**************************")
     # current theta, beta, hip
-    theta = np.deg2rad(130)
-    beta = np.deg2rad(50)
+    theta = np.deg2rad(50)
+    beta = np.deg2rad(40)
     hip = np.array([0.1, 0])
     desired_hip = np.array([0.2, 0])
     theta, beta = legmodel.move(theta, beta, desired_hip - hip)
