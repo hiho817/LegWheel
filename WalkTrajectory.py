@@ -22,7 +22,7 @@ sampling = 1000    # sampling rate, how many commands to one motor per second.
 stand_height = 0.2 + leg_model.r
 step_length = 0.4
 step_height = 0.06
-forward_distance = 2.0  # distance to walk
+forward_distance = 0.5  # distance to walk
 
 # Use self-defined initial configuration
 use_init_phi = False
@@ -83,7 +83,7 @@ sp = [[] for _ in range(4)]
 traveled_distance = 0
 
 # Initial teata, beta
-contact_rim = ["G", "Ll", "Lr", "Ul", "Ur"]
+contact_rim = ["G", "L_l", "L_r", "U_l", "U_r"]
 rim_idx =   [3  , 2   , 4   , 1   , 5]
 contact_hieght = [leg_model.r, leg_model.radius, leg_model.radius, leg_model.radius, leg_model.radius]
 for i in range(4):

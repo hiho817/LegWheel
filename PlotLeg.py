@@ -159,14 +159,14 @@ class LegAnimation(LegModel.LegModel):
             theta, beta = self.inverse(foothold - O + np.array([0, self.r]), 'G')
         elif rim == 'lower':
             if foothold[0] > O[0]:  # left lower rim
-                theta, beta = self.inverse(foothold - O + np.array([0, self.radius]), 'Ll')
+                theta, beta = self.inverse(foothold - O + np.array([0, self.radius]), 'L_l')
             else:                   # right lower rim
-                theta, beta = self.inverse(foothold - O + np.array([0, self.radius]), 'Lr')
+                theta, beta = self.inverse(foothold - O + np.array([0, self.radius]), 'L_r')
         elif rim == 'upper':
             if foothold[0] > O[0]:  # left lower rim
-                theta, beta = self.inverse(foothold - O + np.array([0, self.radius]), 'Ul')
+                theta, beta = self.inverse(foothold - O + np.array([0, self.radius]), 'U_l')
             else:                   # right lower rim
-                theta, beta = self.inverse(foothold - O + np.array([0, self.radius]), 'Ur')
+                theta, beta = self.inverse(foothold - O + np.array([0, self.radius]), 'U_r')
             
         if ax is None:
             fig, ax = plt.subplots()
