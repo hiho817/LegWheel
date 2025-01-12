@@ -13,7 +13,7 @@ leg_model = LegModel.LegModel(sim=sim)
 #### User-defined parameters ####
 animate = True  # create animate file
 output_file_name = 'walk_trajectory'
-transform = True   # tramsform to initial configuration before first command
+transform = False   # tramsform to initial configuration before first command
 BL = 0.444  # body length, 44.4 cm
 BH = 0.2     # body height, 20 cm
 CoM_bias = 0.0    # x bias of center of mass
@@ -22,14 +22,14 @@ sampling = 1000    # sampling rate, how many commands to one motor per second.
 stand_height = 0.2 + leg_model.r
 step_length = 0.4
 step_height = 0.06
-forward_distance = 0.5  # distance to walk
+forward_distance = 1.0  # distance to walk
 
 # Use self-defined initial configuration
-use_init_phi = False
-init_phi_r = np.array([13.849, 8.5311, 13.88, 14.242]) # initial phi_r: A, B, C, D
-init_phi_l = np.array([10.747, 5.0024, 10.858, 11.24]) # initial phi_l: A, B, C, D
-init_theta =  (init_phi_r - init_phi_l)/2 + np.deg2rad(17)
-init_beta  = -(init_phi_r + init_phi_l)/2
+use_init_phi = True
+init_phi_r = np.array([1.7908786895256839, 1.1794001564068406, 1.1744876957173913, 1.790992783013031]) # initial phi_r: A, B, C, D
+init_phi_l = np.array([0.7368824288764617, -0.07401410141135822, -1.8344700758454735e-15, 5.5466991499313485]) # initial phi_l: A, B, C, D
+init_theta = (init_phi_r - init_phi_l)/2 + np.deg2rad(17)
+init_beta  = (init_phi_r + init_phi_l)/2
 
 
 #### Dependent parameters ####
@@ -145,6 +145,15 @@ hip_list = np.array(hip_list)
 create_command_csv_theta_beta(theta_list, beta_list, output_file_name, transform=transform)
 # create_command_csv(theta_list, -beta_list, output_file_name, transform=transform)
 
+# Check for theta range
+max_theta = np.deg2rad(160)
+min_theta = np.deg2rad(17)
+limit_u = theta_list > max_theta   # theta exceeding upper bound set to upper bound
+limit_l = theta_list < min_theta   # theta below lower bound set to lower bound
+print("Total limit upper bound", np.sum(limit_u))
+print("Total Limit lower bound", np.sum(limit_l))
+    
+# Animation
 if animate:
     fps = 10
     divide = sampling//fps
@@ -175,4 +184,4 @@ if animate:
             ax = Animation.plot_leg(theta_list[i, frame*divide], beta_list[i, frame*divide], hip_list[i, frame*divide, :], ax)
 
     ani = FuncAnimation(fig, plot_update, frames=number_command//divide)
-    ani.save(output_file_name + ".gif", fps=fps)
+    ani.save(output_file_name + ".mp4", fps=fps)
