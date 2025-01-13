@@ -28,6 +28,8 @@ forward_distance = 1.0  # distance to walk
 use_init_phi = True
 init_phi_r = np.array([1.7908786895256839, 1.1794001564068406, 1.1744876957173913, 1.790992783013031]) # initial phi_r: A, B, C, D
 init_phi_l = np.array([0.7368824288764617, -0.07401410141135822, -1.8344700758454735e-15, 5.5466991499313485]) # initial phi_l: A, B, C, D
+init_phi_r[[0,3]] = -init_phi_r[[0,3]]
+init_phi_l[[0,3]] = -init_phi_l[[0,3]]
 init_theta = (init_phi_r - init_phi_l)/2 + np.deg2rad(17)
 init_beta  = (init_phi_r + init_phi_l)/2
 
@@ -151,14 +153,13 @@ min_theta = np.deg2rad(17)
 limit_u = theta_list > max_theta   # theta exceeding upper bound set to upper bound
 limit_l = theta_list < min_theta   # theta below lower bound set to lower bound
 print("Total limit upper bound", np.sum(limit_u))
-print("Total Limit lower bound", np.sum(limit_l))
+print("Total limit lower bound", np.sum(limit_l))
     
 # Animation
 if animate:
     fps = 10
     divide = sampling//fps
-    fig_size = 10
-    fig, ax = plt.subplots( figsize=(fig_size, fig_size) )
+    fig, ax = plt.subplots( figsize=(10, 5) )
 
     Animation = PlotLeg.LegAnimation(sim=sim)
     Animation.setting()
@@ -184,4 +185,4 @@ if animate:
             ax = Animation.plot_leg(theta_list[i, frame*divide], beta_list[i, frame*divide], hip_list[i, frame*divide, :], ax)
 
     ani = FuncAnimation(fig, plot_update, frames=number_command//divide)
-    ani.save(output_file_name + ".mp4", fps=fps)
+    ani.save(output_file_name + ".gif", fps=fps)
