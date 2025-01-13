@@ -7,7 +7,7 @@ import PlotLeg
 from utils import *
 from bezier import swing
 
-sim = False
+sim = True
 leg_model = LegModel.LegModel(sim=sim)
 
 #### User-defined parameters ####
@@ -19,32 +19,41 @@ BH = 0.2     # body height, 20 cm
 CoM_bias = 0.0    # x bias of center of mass
 velocity = 0.1     # velocity of hip, meter per second
 sampling = 1000    # sampling rate, how many commands to one motor per second.
-stand_height = 0.2 + leg_model.r
+stand_height = 0.2
 step_length = 0.4
 step_height = 0.06
 forward_distance = 1.0  # distance to walk
 
 # Use self-defined initial configuration
-use_init_phi = True
-init_phi_r = np.array([1.7908786895256839, 1.1794001564068406, 1.1744876957173913, 1.790992783013031]) # initial phi_r: A, B, C, D
-init_phi_l = np.array([0.7368824288764617, -0.07401410141135822, -1.8344700758454735e-15, 5.5466991499313485]) # initial phi_l: A, B, C, D
-init_phi_r[[0,3]] = -init_phi_r[[0,3]]
-init_phi_l[[0,3]] = -init_phi_l[[0,3]]
-init_theta = (init_phi_r - init_phi_l)/2 + np.deg2rad(17)
-init_beta  = (init_phi_r + init_phi_l)/2
-
+use_init_conf = True
+init_eta = np.array([1.7908786895256839,0.7368824288764617,1.1794001564068406,-0.07401410141135822,1.1744876957173913,-1.8344700758454735e-15,1.790992783013031,5.5466991499313485])
+init_theta = init_eta[[0,2,4,6]]
+init_beta  = init_eta[[1,3,5,7]]
+init_beta[[0, 3]] *= -1
 
 #### Dependent parameters ####
 swing_time = 0.2    # duty: 0.8~1.0
 # Get foothold in hip coordinate from initial configuration
 relative_foothold = np.zeros((4, 2))
 for i in range(4):
+    leg_model.contact_map(init_theta[i], init_beta[i])
     leg_model.forward(init_theta[i], init_beta[i])
-    relative_foothold[i, 0] += leg_model.G[0]
+    if leg_model.rim == 1:
+        relative_foothold[i, 0] = leg_model.U_l[0]
+    elif leg_model.rim == 2:
+        relative_foothold[i, 0] = leg_model.L_l[0]
+    elif leg_model.rim == 3:
+        relative_foothold[i, 0] = leg_model.G[0]
+    elif leg_model.rim == 4:
+        relative_foothold[i, 0] = leg_model.L_r[0]
+    elif leg_model.rim == 5:
+        relative_foothold[i, 0] = leg_model.U_r[0]
+    else: 
+        print("Leg cannot contact ground.")
     relative_foothold[i, 1] = -stand_height
 # Get initial leg duty  
 first_swing_leg = np.argmin(relative_foothold[:, 0])
-if (not use_init_phi) or (first_swing_leg==0):
+if (not use_init_conf) or (first_swing_leg==0):
     duty = np.array([1-swing_time, 0.5-swing_time, 0.5, 0.0])   # initial duty, left front leg first swing
 elif first_swing_leg==1:
     duty = np.array([0.5-swing_time, 1-swing_time, 0.0, 0.5])   # initial duty, right front leg first swing
@@ -58,7 +67,7 @@ hip = np.array([[BL/2, stand_height],
                 [BL/2, stand_height],
                 [-BL/2, stand_height],
                 [-BL/2, stand_height]])
-if use_init_phi:
+if use_init_conf:
     foothold = np.array([hip[0] + relative_foothold[0],   # initial leg configuration
                         hip[0] + relative_foothold[1],
                         hip[2] + relative_foothold[2],
@@ -86,7 +95,7 @@ traveled_distance = 0
 
 # Initial teata, beta
 contact_rim = ["G", "L_l", "L_r", "U_l", "U_r"]
-rim_idx =   [3  , 2   , 4   , 1   , 5]
+rim_idx =   [3, 2, 4, 1, 5]
 contact_hieght = [leg_model.r, leg_model.radius, leg_model.radius, leg_model.radius, leg_model.radius]
 for i in range(4):
     # calculate contact rim of initial pose
@@ -185,4 +194,4 @@ if animate:
             ax = Animation.plot_leg(theta_list[i, frame*divide], beta_list[i, frame*divide], hip_list[i, frame*divide, :], ax)
 
     ani = FuncAnimation(fig, plot_update, frames=number_command//divide)
-    ani.save(output_file_name + ".gif", fps=fps)
+    ani.save(output_file_name + ".mp4", fps=fps)
