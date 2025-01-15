@@ -129,7 +129,7 @@ while traveled_distance <= forward_distance:
             leg_model.forward(theta_list[i][-1], beta_list[i][-1])
             p_lo = hip[i] + leg_model.G # G position when leave ground
             # calculate contact rim when touch ground
-            for j in [0, 1, 3]: # G, Ll, Rl
+            for j in [0, 1, 3]: # G, L_l, U_l
                 theta, beta = leg_model.inverse( np.array([step_length/2*(1-swing_time), -stand_height+contact_hieght[j]]), contact_rim[j])
                 leg_model.contact_map(theta, beta)  # also get joint positions when touch ground, in polar coordinate (x+jy).
                 if leg_model.rim == rim_idx[j]:
