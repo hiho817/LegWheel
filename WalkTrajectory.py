@@ -25,7 +25,7 @@ step_height = 0.06
 forward_distance = 1.0  # distance to walk
 
 # Use self-defined initial configuration
-use_init_conf = True
+use_init_conf = False
 init_eta = np.array([1.7908786895256839,0.7368824288764617,1.1794001564068406,-0.07401410141135822,1.1744876957173913,-1.8344700758454735e-15,1.790992783013031,5.5466991499313485])
 init_theta = init_eta[[0,2,4,6]]
 init_beta  = init_eta[[1,3,5,7]]
@@ -95,7 +95,7 @@ traveled_distance = 0
 
 # Initial teata, beta
 contact_rim = ["G", "L_l", "L_r", "U_l", "U_r"]
-rim_idx =   [3, 2, 4, 1, 5]
+rim_idx = [3, 2, 4, 1, 5]
 contact_hieght = [leg_model.r, leg_model.radius, leg_model.radius, leg_model.radius, leg_model.radius]
 for i in range(4):
     # calculate contact rim of initial pose
@@ -107,7 +107,7 @@ for i in range(4):
     theta_list[i].append(theta)
     beta_list[i].append(beta)
     hip_list[i].append(hip[i].copy())
-    
+
 # Start walking
 while traveled_distance <= forward_distance:
     for i in range(4):
