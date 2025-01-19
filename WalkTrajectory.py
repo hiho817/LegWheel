@@ -11,9 +11,9 @@ sim = True
 leg_model = LegModel.LegModel(sim=sim)
 
 #### User-defined parameters ####
-animate = True  # create animate file
+animate = False  # create animate file
 output_file_name = 'walk_trajectory'
-transform = False   # tramsform to initial configuration before first command
+transform = True   # tramsform to initial configuration before first command
 BL = 0.444  # body length, 44.4 cm
 BH = 0.2     # body height, 20 cm
 CoM_bias = 0.0    # x bias of center of mass
@@ -22,7 +22,7 @@ sampling = 1000    # sampling rate, how many commands to one motor per second.
 stand_height = 0.2
 step_length = 0.4
 step_height = 0.06
-forward_distance = 1.0  # distance to walk
+forward_distance = 0.0  # distance to walk
 
 # Use self-defined initial configuration
 use_init_conf = False
@@ -160,8 +160,8 @@ max_theta = np.deg2rad(160)
 min_theta = np.deg2rad(17)
 limit_u = theta_list > max_theta   # theta exceeding upper bound set to upper bound
 limit_l = theta_list < min_theta   # theta below lower bound set to lower bound
-print("Total limit upper bound", np.sum(limit_u))
-print("Total limit lower bound", np.sum(limit_l))
+print("Total limit upper bound:", np.sum(limit_u))
+print("Total limit lower bound:", np.sum(limit_l))
     
 # Animation
 if animate:
