@@ -218,3 +218,37 @@ if __name__ == "__main__":
     y_ = [p[1] for p in curve_points]
     plt.plot(x_, y_)
     plt.show()
+    
+
+    # SwingProfile
+    p_size = 0.2    # point size of each hip position
+    fig_size = 10
+    fig, ax = plt.subplots()
+    # fig, ax = plt.subplots(figsize = (fig_size,fig_size))
+    plt.grid(True)
+    ax.set_aspect('equal')  # 座標比例相同
+    ax.set_xlim(-0.1, 0.3)
+    ax.set_ylim(-0.01, 0.1)
+
+
+    step_length = 0.2
+    step_h = 0.05
+    p_lo = np.array([0, 0])   # lift point (G) in world coordinate
+    p_td = np.array([step_length, 0]) # touch point (G) in world coordinate
+    sp = SwingProfile(p_td[0] - p_lo[0], step_h, 0.0, 0.0, 0.0, 0.0, 0.0, p_lo[0], p_lo[1], p_td[1] - p_lo[1])
+
+
+    d = np.linspace(0, 1, 10000)
+    curve_points = [sp.getFootendPoint(_) for _ in d]
+    x_ = [p[0] for p in curve_points]
+    y_ = [p[1] for p in curve_points]
+
+    ax.plot(x_, y_)
+    ax.plot([-0.1, 0.3], [0, 0], color='b') # ground
+    curve_point = sp.getFootendPoint(0.1)
+    ax.plot(*(curve_point), '*r')
+    curve_point = sp.getFootendPoint(0.9)
+    ax.plot(*(curve_point), '*g')
+    plt.grid(True)
+    plt.show()
+    
