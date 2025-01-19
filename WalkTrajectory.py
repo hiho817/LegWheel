@@ -153,8 +153,7 @@ while traveled_distance <= forward_distance:
 theta_list = np.array(theta_list)
 beta_list = np.array(beta_list)
 hip_list = np.array(hip_list)
-create_command_csv_theta_beta(theta_list, beta_list, output_file_name, transform=transform)
-# create_command_csv(theta_list, -beta_list, output_file_name, transform=transform)
+create_command_csv(theta_list, beta_list, output_file_name, transform=transform)
 
 # Check for theta range
 max_theta = np.deg2rad(160)
