@@ -1,8 +1,7 @@
 import numpy as np
 import pandas as pd
-from FittedCoefficient import *
 
-def create_command_csv(theta_command, beta_command, file_name, transform=True): # 4*n, 4*n
+def create_command_csv_phi(theta_command, beta_command, file_name, transform=True): # 4*n, 4*n
     # Tramsform beta, theta to right, left motor angles
     theta_0 = np.array([-17, 17])*np.pi/180
     theta_beta = np.array([theta_command, beta_command]).reshape(2, -1)   # 2*(4*n)
@@ -35,7 +34,7 @@ def create_command_csv(theta_command, beta_command, file_name, transform=True): 
     df.to_csv(file_name + '.csv', index=False, header=False)
     
     
-def create_command_csv_theta_beta(theta_command, beta_command, file_name, transform=True): # 4*n, 4*n
+def create_command_csv(theta_command, beta_command, file_name, transform=True): # 4*n, 4*n
     #### Tramsform (motor angle from 0 to initial pose) ####
     if transform:
         tramsform_theta = []
@@ -55,6 +54,14 @@ def create_command_csv_theta_beta(theta_command, beta_command, file_name, transf
         else:
             motor_command[:, 2*i+1] = -beta_command[i, :]
             
+    # transfer motor command to be continuous, i.e. [pi-d, -pi+d] -> [pi-d, pi+d]
+    threshold = np.pi/2
+    last = motor_command[0,:]
+    for angle in motor_command[1:]:
+        for i in range(8):
+            while np.abs(angle[i]-last[i]) > threshold: 
+                angle[i] -= np.pi*np.sign(angle[i]-last[i]) 
+        last = angle        
 
     # write motor commands into csv file #
     motor_command = np.hstack(( motor_command, -1*np.ones((motor_command.shape[0], 4)) ))    # add four column of -1 
