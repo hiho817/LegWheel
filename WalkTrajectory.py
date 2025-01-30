@@ -11,7 +11,7 @@ sim = True
 leg_model = LegModel.LegModel(sim=sim)
 
 #### User-defined parameters ####
-animate = False  # create animate file
+animate = True  # create animate file
 output_file_name = 'walk_trajectory'
 transform = True   # tramsform to initial configuration before first command
 BL = 0.444  # body length, 44.4 cm
@@ -22,7 +22,7 @@ sampling = 1000    # sampling rate, how many commands to one motor per second.
 stand_height = 0.2
 step_length = 0.4
 step_height = 0.06
-forward_distance = 0.0  # distance to walk
+forward_distance = 0.3  # distance to walk
 
 # Use self-defined initial configuration
 use_init_conf = False

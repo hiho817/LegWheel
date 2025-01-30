@@ -200,7 +200,7 @@ class LegModel:
     # Rim: the rim contacting ground of the corresponding theta and beta.
     # Alpha: alpha=0 when (theta, beta)=(17, 0). alpha=-2pi~2pi when lower or upper rim contact. alpha=alpha_G when G contact.
     # Height: distance between ground and hip.
-    def contact_map(self, theta, beta, slope=0):
+    def contact_map(self, theta, beta, slope=0.0):
         beta = np.array(beta) - slope
         self.forward(theta, beta, vector=False)
 
@@ -230,6 +230,11 @@ class LegModel:
         self.height = abs(arc_list[self.rim-1, 0]) if self.n_elements == 0 else abs(arc_list[self.rim-1, 0, np.arange(self.n_elements)])
         x_p = arc_list[self.rim-1, 2] if self.n_elements == 0 else arc_list[self.rim-1, 2, np.arange(self.n_elements)]
         self.contact_p = np.hstack((x_p, -self.height)) if self.n_elements == 0 else np.hstack((x_p.reshape(-1, 1), -self.height.reshape(-1, 1)))
+        if slope != 0.0:
+            R = np.array([[np.cos(slope), -np.sin(slope)], 
+                          [np.sin(slope),  np.cos(slope)]])
+            self.contact_p = self.contact_p.reshape(-1, 2) @ R.T
+            self.contact_p = self.contact_p.reshape(2) if self.n_elements == 0 else self.contact_p.reshape(-1, 2)
             
     # Get lowest point and the corresponding alpha value of the rim
     def arc_min(self, p1, p2, O, rim): # alpha: arc starting from most clockwise (most left) of the rim
@@ -307,8 +312,13 @@ class LegModel:
     #### Move ####
     # Assume ground slope is 0 and the leg is currently contacting the ground.
     # Input move_vec: vector of hip movement [delta x, delta y]
-    def move(self, theta, beta, move_vec, contact_upper=True):
-        self.contact_map(theta, beta) # also get all joint positions in polar coordinate (x+jy).
+    def move(self, theta, beta, move_vec, slope=0, contact_upper=True):
+        self.contact_map(theta, beta, slope) # also get all joint positions in polar coordinate (x+jy).
+        tmp_x = np.cos(-slope)*move_vec[0] - np.sin(-slope)*move_vec[1]
+        tmp_y = np.sin(-slope)*move_vec[0] + np.cos(-slope)*move_vec[1]
+        move_vec[0] = tmp_x
+        move_vec[1] = tmp_y
+
         if contact_upper:   # if upper rim can contact ground, set lowest point as contact point.
             contact_rim = self.rim
         else:   # if upper rim can not contact ground, set lowest point among lower rim and G as contact point.
@@ -326,7 +336,7 @@ class LegModel:
             
         d_theta, d_beta = result
         self.theta += d_theta
-        self.beta  += d_beta
+        self.beta  += d_beta + slope
         return self.theta, self.beta
 
     # Objective function for move
@@ -397,7 +407,7 @@ if __name__ == '__main__':
     # input single value
     print("==========Single Input==========")
     theta = np.deg2rad(130)
-    beta  = 0
+    beta  = np.deg2rad(10)
     legmodel.forward(theta, beta)
     print("Output G with single value input:", legmodel.G)
     legmodel.contact_map(theta, beta)
@@ -466,5 +476,3 @@ if __name__ == '__main__':
     desired_hip = np.array([0.2, 0])
     theta, beta = legmodel.move(theta, beta, desired_hip - hip)
     print(f"Use theta = {theta}, beta = {beta} allows the leg to roll from {hip} to {desired_hip} along the ground.")
-    
-    
