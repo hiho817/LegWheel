@@ -312,12 +312,13 @@ class LegModel:
     #### Move ####
     # Assume ground slope is 0 and the leg is currently contacting the ground.
     # Input move_vec: vector of hip movement [delta x, delta y]
-    def move(self, theta, beta, move_vec, slope=0, contact_upper=True):
+    def move(self, theta, beta, move_vec, slope=0.0, contact_upper=True):
         self.contact_map(theta, beta, slope) # also get all joint positions in polar coordinate (x+jy).
-        tmp_x = move_vec[0]*np.cos(-slope) - move_vec[1]*np.sin(-slope)
-        tmp_y = move_vec[0]*np.sin(-slope) + move_vec[1]*np.cos(-slope)
-        move_vec[0] = tmp_x
-        move_vec[1] = tmp_y
+        if slope != 0.0:
+            x_new = move_vec[0]*np.cos(-slope) - move_vec[1]*np.sin(-slope)
+            y_new = move_vec[0]*np.sin(-slope) + move_vec[1]*np.cos(-slope)
+            move_vec[0] = x_new
+            move_vec[1] = y_new
 
         if contact_upper:   # if upper rim can contact ground, set lowest point as contact point.
             contact_rim = self.rim
