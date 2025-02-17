@@ -55,13 +55,13 @@ def create_command_csv(theta_command, beta_command, file_name, transform=True): 
             motor_command[:, 2*i+1] = -beta_command[i, :]
             
     # transfer motor command to be continuous, i.e. [pi-d, -pi+d] -> [pi-d, pi+d]
-    threshold = np.pi/2
-    last = motor_command[0,:]
-    for angle in motor_command[1:]:
-        for i in range(8):
-            while np.abs(angle[i]-last[i]) > threshold: 
-                angle[i] -= np.pi*np.sign(angle[i]-last[i]) 
-        last = angle        
+    # threshold = np.pi/2
+    # last = motor_command[0,:]
+    # for angle in motor_command[1:]:
+    #     for i in range(8):
+    #         while np.abs(angle[i]-last[i]) > threshold: 
+    #             angle[i] -= np.pi*np.sign(angle[i]-last[i]) 
+    #     last = angle        
 
     # write motor commands into csv file #
     motor_command = np.hstack(( motor_command, -1*np.ones((motor_command.shape[0], 4)) ))    # add four column of -1 
