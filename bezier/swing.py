@@ -34,8 +34,10 @@ class SwingProfile:
         c4 = c2
         c5 = c4 + np.array([0.5 * self.L + self.dL1 + self.dL2, 0])
         c6 = c5
-        c7 = c5 + np.array([0, self.dh])
-        c8 = c7 + np.array([0.5 * self.L + self.dL3 + self.dL4, 0])
+        # c7 = c5 + np.array([0, self.dh])
+        # c8 = c7 + np.array([0.5 * self.L + self.dL3 + self.dL4, 0])
+        c7 = c5 + np.array([0, self.dh]) + np.array([0.5 * self.L + self.dL3 + self.dL4, 0])
+        c8 = c7 
         c9 = c8
         c10 = c8 - np.array([self.dL4, self.h + self.dh]) + np.array([0, self.diff_h])
         c11 = c10 - np.array([self.dL3, 0])
@@ -227,12 +229,12 @@ if __name__ == "__main__":
     # fig, ax = plt.subplots(figsize = (fig_size,fig_size))
     plt.grid(True)
     ax.set_aspect('equal')  # 座標比例相同
-    ax.set_xlim(-0.1, 0.3)
-    ax.set_ylim(-0.01, 0.1)
+    # ax.set_xlim(-0.1, 0.3)
+    # ax.set_ylim(-0.01, 0.1)
 
 
-    step_length = 0.2
-    step_h = 0.05
+    step_length = 0.305
+    step_h = 0.08
     p_lo = np.array([0, 0])   # lift point (G) in world coordinate
     p_td = np.array([step_length, 0]) # touch point (G) in world coordinate
     sp = SwingProfile(p_td[0] - p_lo[0], step_h, 0.0, 0.0, 0.0, 0.0, 0.0, p_lo[0], p_lo[1], p_td[1] - p_lo[1])
@@ -242,12 +244,13 @@ if __name__ == "__main__":
     curve_points = [sp.getFootendPoint(_) for _ in d]
     x_ = [p[0] for p in curve_points]
     y_ = [p[1] for p in curve_points]
-
     ax.plot(x_, y_)
-    ax.plot([-0.1, 0.3], [0, 0], color='b') # ground
+    ax.plot([-0.1, 0.4], [0, 0], color='b') # ground
     curve_point = sp.getFootendPoint(0.1)
     ax.plot(*(curve_point), '*r')
     curve_point = sp.getFootendPoint(0.9)
+    print(curve_point[0] - x_[-1])
+
     ax.plot(*(curve_point), '*g')
     plt.grid(True)
     plt.show()

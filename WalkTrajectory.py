@@ -7,7 +7,7 @@ import PlotLeg
 from utils import *
 from bezier import swing
 
-sim = True
+sim = False
 leg_model = LegModel.LegModel(sim=sim)
 
 #### User-defined parameters ####
@@ -19,10 +19,10 @@ BH = 0.2     # body height, 20 cm
 CoM_bias = 0.0    # x bias of center of mass
 velocity = 0.1     # velocity of hip, meter per second
 sampling = 1000    # sampling rate, how many commands to one motor per second.
-stand_height = 0.2
-step_length = 0.4
-step_height = 0.06
-forward_distance = 0.3  # distance to walk
+stand_height = 0.20
+step_length = 0.3
+step_height = 0.04
+forward_distance = 3.0  # distance to walk
 
 # Use self-defined initial configuration
 use_init_conf = False
@@ -32,7 +32,7 @@ init_beta  = init_eta[[1,3,5,7]]
 init_beta[[0, 3]] *= -1
 
 #### Dependent parameters ####
-swing_time = 0.2    # duty: 0.8~1.0
+swing_time = 0.15    # duty: 0.8~1.0
 # Get foothold in hip coordinate from initial configuration
 relative_foothold = np.zeros((4, 2))
 for i in range(4):
