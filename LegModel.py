@@ -27,26 +27,26 @@ class LegModel:
         # linkage parameters
         self.arc_HF = np.deg2rad(130)   # arc HF
         self.arc_BC = np.deg2rad(101)   # arc BC
-        self.l1 = 0.8 * self.R                                                          # l1
-        self.l2 = self.R - self.l1                                                      # l2
-        self.l3 = 2.0 * self.R * np.sin(self.arc_BC / 2)                                # l3
-        self.l4 = 0.882966335 * self.R                                                  # l4
-        self.l5 = 0.9 * self.R                                                          # l5
-        self.l6 = 0.4 * self.R                                                          # l6
-        self.l7 = 2.0 * self.R * np.sin((self.arc_HF - self.arc_BC - self.theta0) / 2)  # l7
-        self.l8 = 2.0 * self.R * np.sin((np.pi - self.arc_HF) / 2)                      # l8
+        self.l1 = 0.8 * self.R                                                          # l1: OA
+        self.l2 = self.R - self.l1                                                      # l2: AB
+        self.l3 = 2.0 * self.R * np.sin(self.arc_BC / 2)                                # l3: BC
+        self.l4 = 0.882966335 * self.R                                                  # l4: CD
+        self.l5 = 0.9 * self.R                                                          # l5: AD
+        self.l6 = 0.4 * self.R                                                          # l6: DE
+        self.l7 = 2.0 * self.R * np.sin((self.arc_HF - self.arc_BC - self.theta0) / 2)  # l7: CF
+        self.l8 = 2.0 * self.R * np.sin((np.pi - self.arc_HF) / 2)                      # l8: FG
         # some useful paramters in the calculation
         self.l_AE = self.l5 + self.l6                                       # length of AE
         self.l_BF = 2.0 * self.R * np.sin((self.arc_HF - self.theta0) / 2)  # length of BF
         self.l_BH = 2.0 * self.R * np.sin( self.theta0 / 2)                 # length of BH
         self.ang_UBC = (np.pi - self.arc_BC) / 2                            # angle upperBC
         self.ang_LFG = (np.pi - (np.pi - self.arc_HF)) / 2                  # angle lowerFG
+        self.ang_BCF = np.arccos((self.l3**2 + self.l7**2 - self.l_BF**2) / (2 * self.l3 * self.l7))    # angle BCF
         
         #### Variable values ####
         # intermediate values during the calculation
         self.l_BD = 0       # length of BD
         self.ang_OEA = 0    # angle OEA
-        self.ang_BCF = 0    # angle BCF
         self.ang_DBC = 0    # angle DBC
         self.ang_OGF = 0    # angle OGF
         # get initial positions of all joints ([x, y])
@@ -88,15 +88,16 @@ class LegModel:
             self.A_l = self.l1 * np.exp( 1j*(self.theta) )
             self.B_l = self.R * np.exp( 1j*(self.theta) )
             self.ang_OEA = np.arcsin( self.l1 / self.l_AE *np.sin(self.theta) )
-            self.E = self.l1 * np.cos(self.theta) - self.l_AE * np.cos(self.ang_OEA)
+            self.E = self.A_l.real - self.l_AE * np.cos(self.ang_OEA)   # OE = OA - EA
+            # self.E = self.l1 * np.cos(self.theta) - self.l_AE * np.cos(self.ang_OEA)
             self.D_l = self.E + self.l6 * np.exp( 1j*(self.ang_OEA) )
             self.l_BD = abs(self.D_l - self.B_l)
             self.ang_DBC = np.arccos((self.l_BD**2 + self.l3**2 - self.l4**2) / (2 * self.l_BD * self.l3))
             self.C_l = self.B_l + (self.D_l - self.B_l) * np.exp( -1j*(self.ang_DBC) ) * (self.l3 / self.l_BD) # OC = OB + BC
-            self.ang_BCF = np.arccos((self.l3**2 + self.l7**2 - self.l_BF**2) / (2 * self.l3 * self.l7)) 
             self.F_l = self.C_l + (self.B_l - self.C_l) * np.exp( -1j*(self.ang_BCF) ) * (self.l7 / self.l3) # OF = OC + CF
             self.ang_OGF = np.arcsin(abs(self.F_l.imag) / self.l8)
-            self.G = self.F_l - self.l8 * np.exp( 1j*(self.ang_OGF) ) # OG = OF - GF
+            self.G = self.F_l.real - self.l8 * np.cos(self.ang_OGF) # OG = OF - GF
+            # self.G = self.F_l - self.l8 * np.exp( 1j*(self.ang_OGF) ) # OG = OF - GF
             self.U_l = self.B_l + (self.C_l - self.B_l) * np.exp( 1j*(self.ang_UBC) ) * (self.R / self.l3)   # OOU = OB + BOU
             self.L_l = self.F_l + (self.G - self.F_l) * np.exp( 1j*(self.ang_LFG) ) * (self.R / self.l8)   # OOL = OF + FOL
             self.H_l = self.U_l + (self.B_l - self.U_l) * np.exp( -1j*(self.theta0) )  # OH = OOU + OUH
