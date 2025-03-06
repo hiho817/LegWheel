@@ -87,7 +87,7 @@ class LegModel:
             # Forward kinematics
             self.A_l = self.l1 * np.exp( 1j*(self.theta) )
             self.B_l = self.R * np.exp( 1j*(self.theta) )
-            self.ang_OEA = np.arcsin( self.l1 / self.l_AE *np.sin(self.theta) )
+            self.ang_OEA = np.arcsin(abs(self.A_l.imag) / self.l_AE)
             self.E = self.A_l.real - self.l_AE * np.cos(self.ang_OEA)   # OE = OA - EA
             # self.E = self.l1 * np.cos(self.theta) - self.l_AE * np.cos(self.ang_OEA)
             self.D_l = self.E + self.l6 * np.exp( 1j*(self.ang_OEA) )
