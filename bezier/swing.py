@@ -232,15 +232,13 @@ if __name__ == "__main__":
     # ax.set_xlim(-0.1, 0.3)
     # ax.set_ylim(-0.01, 0.1)
 
-
-    step_length = 0.305
-    step_h = 0.08
+    step_length = 0.5
+    step_h = 0.02 / 0.3
     p_lo = np.array([0, 0])   # lift point (G) in world coordinate
-    p_td = np.array([step_length, 0]) # touch point (G) in world coordinate
+    p_td = np.array([step_length, 0.0]) # touch point (G) in world coordinate
     sp = SwingProfile(p_td[0] - p_lo[0], step_h, 0.0, 0.0, 0.0, 0.0, 0.0, p_lo[0], p_lo[1], p_td[1] - p_lo[1])
 
 
-    d = np.linspace(0, 1, 10000)
     curve_points = [sp.getFootendPoint(_) for _ in d]
     x_ = [p[0] for p in curve_points]
     y_ = [p[1] for p in curve_points]
@@ -250,8 +248,17 @@ if __name__ == "__main__":
     ax.plot(*(curve_point), '*r')
     curve_point = sp.getFootendPoint(0.9)
     print(curve_point[0] - x_[-1])
-
+    
     ax.plot(*(curve_point), '*g')
     plt.grid(True)
     plt.show()
     
+    
+    # diff of bezier
+    fig, ax = plt.subplots()
+    x_diff = np.diff(x_) * 1000
+    y_diff = np.diff(y_) * 1000
+    ax.plot(np.arange(x_diff.shape[0]), x_diff) # x velocity
+    ax.plot(np.arange(y_diff.shape[0]), y_diff) # x velocity
+    plt.grid(True)
+    plt.show()
