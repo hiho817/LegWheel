@@ -89,7 +89,6 @@ class LegModel:
             self.B_l = self.R * np.exp( 1j*(self.theta) )
             self.ang_OEA = np.arcsin(abs(self.A_l.imag) / self.l_AE)
             self.E = self.A_l.real - self.l_AE * np.cos(self.ang_OEA)   # OE = OA - EA
-            # self.E = self.l1 * np.cos(self.theta) - self.l_AE * np.cos(self.ang_OEA)
             self.D_l = self.E + self.l6 * np.exp( 1j*(self.ang_OEA) )
             self.l_BD = abs(self.D_l - self.B_l)
             self.ang_DBC = np.arccos((self.l_BD**2 + self.l3**2 - self.l4**2) / (2 * self.l_BD * self.l3))
@@ -97,7 +96,6 @@ class LegModel:
             self.F_l = self.C_l + (self.B_l - self.C_l) * np.exp( -1j*(self.ang_BCF) ) * (self.l7 / self.l3) # OF = OC + CF
             self.ang_OGF = np.arcsin(abs(self.F_l.imag) / self.l8)
             self.G = self.F_l.real - self.l8 * np.cos(self.ang_OGF) # OG = OF - GF
-            # self.G = self.F_l - self.l8 * np.exp( 1j*(self.ang_OGF) ) # OG = OF - GF
             self.U_l = self.B_l + (self.C_l - self.B_l) * np.exp( 1j*(self.ang_UBC) ) * (self.R / self.l3)   # OOU = OB + BOU
             self.L_l = self.F_l + (self.G - self.F_l) * np.exp( 1j*(self.ang_LFG) ) * (self.R / self.l8)   # OOL = OF + FOL
             self.H_l = self.U_l + (self.B_l - self.U_l) * np.exp( -1j*(self.theta0) )  # OH = OOU + OUH
