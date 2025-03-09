@@ -204,22 +204,24 @@ class LegModel:
         self.forward(theta, beta, vector=False)
 
         # points on the outside of the wheel
-        G_l = (self.G - self.L_l)   / self.R * self.radius + self.L_l
-        G_r = (self.G - self.L_r)   / self.R * self.radius + self.L_r
-        H_l = (self.H_l - self.U_l) / self.R * self.radius + self.U_l
-        H_r = (self.H_r - self.U_r) / self.R * self.radius + self.U_r
-        F_l = (self.F_l - self.U_l) / self.R * self.radius + self.U_l
-        F_r = (self.F_r - self.U_r) / self.R * self.radius + self.U_r  
+        LG_l = (self.G - self.L_l)   / self.R * self.radius + self.L_l   # L_l -> G -> rim point
+        LG_r = (self.G - self.L_r)   / self.R * self.radius + self.L_r   # L_r -> G -> rim point
+        UH_l = (self.H_l - self.U_l) / self.R * self.radius + self.U_l   # U_l -> H_l -> rim point
+        UH_r = (self.H_r - self.U_r) / self.R * self.radius + self.U_r   # U_r -> H_r -> rim point
+        LF_l = (self.F_l - self.L_l) / self.R * self.radius + self.L_l   # L_l -> F_l -> rim point
+        LF_r = (self.F_r - self.L_r) / self.R * self.radius + self.L_r   # L_r -> F_r -> rim point
+        UF_l = (self.F_l - self.U_l) / self.R * self.radius + self.U_l   # U_l -> F_l -> rim point
+        UF_r = (self.F_r - self.U_r) / self.R * self.radius + self.U_r   # U_r -> F_r -> rim point
         
         # minimum point and its alpha of each arc 
         self.n_elements = 0 if self.theta.ndim == 0 else self.theta.shape[0]  # amount of theta given in an array, 0: single value.
         zeros = (0, 0, 0) if self.n_elements == 0 else (np.zeros(self.n_elements), np.zeros(self.n_elements), np.zeros(self.n_elements))
         arc_list = [
-            self.arc_min(H_l, F_l, self.U_l, 'left upper'),
-            self.arc_min(F_l, G_l, self.L_l, 'left lower'),
-            self.arc_min(G_l, G_r, self.G, 'G'),
-            self.arc_min(G_r, F_r, self.L_r, 'right lower'),
-            self.arc_min(F_r, H_r, self.U_r, 'right upper'),
+            self.arc_min(UH_l, UF_l, self.U_l, 'left upper'),
+            self.arc_min(LF_l, LG_l, self.L_l, 'left lower'),
+            self.arc_min(LG_l, LG_r, self.G, 'G'),
+            self.arc_min(LG_r, LF_r, self.L_r, 'right lower'),
+            self.arc_min(UF_r, UH_r, self.U_r, 'right upper'),
             zeros
         ]
         arc_list = np.array(arc_list)
@@ -234,7 +236,8 @@ class LegModel:
                           [np.sin(slope),  np.cos(slope)]])
             self.contact_p = self.contact_p.reshape(-1, 2) @ R.T
             self.contact_p = self.contact_p.reshape(2) if self.n_elements == 0 else self.contact_p.reshape(-1, 2)
-            
+
+                
     # Get lowest point and the corresponding alpha value of the rim
     def arc_min(self, p1, p2, O, rim): # alpha: arc starting from most clockwise (most left) of the rim
         lowest_points = np.array(.0) if self.n_elements == 0 else np.zeros(self.n_elements)
