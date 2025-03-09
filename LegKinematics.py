@@ -31,12 +31,12 @@ class LegKinematics:
         self.l_BH = 2.0 * self.R * np.sin( self.theta0 / 2)                 # length of BH
         self.ang_UBC = (np.pi - self.arc_BC) / 2                            # angle upperBC
         self.ang_LFG = (np.pi - (np.pi - self.arc_HF)) / 2                  # angle lowerFG
+        self.ang_BCF = np.arccos((self.l3**2 + self.l7**2 - self.l_BF**2) / (2 * self.l3 * self.l7))    # angle BCF
         
         #### Variable values ####
         # intermediate values during the calculation
         self.l_BD = 0       # length of BD
         self.ang_OEA = 0    # angle OEA
-        self.ang_BCF = 0    # angle BCF
         self.ang_DBC = 0    # angle DBC
         self.ang_OGF = 0    # angle OGF
         # get initial positions of all joints ([x, y])
@@ -67,8 +67,8 @@ class LegKinematics:
         # Forward kinematics
         self.A_l = self.l1 * np.exp( 1j*(self.theta) )
         self.B_l = self.R * np.exp( 1j*(self.theta) )
-        self.ang_OEA = np.arcsin( self.l1 / self.l_AE *np.sin(self.theta) )
-        self.E = self.l1 * np.cos(self.theta) - self.l_AE * np.cos(self.ang_OEA)
+        self.ang_OEA = np.arcsin(abs(self.A_l.imag) / self.l_AE)
+        self.E = self.A_l.real - self.l_AE * np.cos(self.ang_OEA)   # OE = OA - EA
         self.D_l = self.E + self.l6 * np.exp( 1j*(self.ang_OEA) )
         self.l_BD = abs(self.D_l - self.B_l)
         self.ang_DBC = np.arccos((self.l_BD**2 + self.l3**2 - self.l4**2) / (2 * self.l_BD * self.l3))
@@ -76,7 +76,7 @@ class LegKinematics:
         self.ang_BCF = np.arccos((self.l3**2 + self.l7**2 - self.l_BF**2) / (2 * self.l3 * self.l7)) 
         self.F_l = self.C_l + (self.B_l - self.C_l) * np.exp( -1j*(self.ang_BCF) ) * (self.l7 / self.l3) # OF = OC + CF
         self.ang_OGF = np.arcsin(abs(self.F_l.imag) / self.l8)
-        self.G = self.F_l - self.l8 * np.exp( 1j*(self.ang_OGF) ) # OG = OF - GF
+        self.G = self.F_l.real - self.l8 * np.cos(self.ang_OGF) # OG = OF - GF
         self.U_l = self.B_l + (self.C_l - self.B_l) * np.exp( 1j*(self.ang_UBC) ) * (self.R / self.l3)   # OOU = OB + BOU
         self.L_l = self.F_l + (self.G - self.F_l) * np.exp( 1j*(self.ang_LFG) ) * (self.R / self.l8)   # OOL = OF + FOL
         self.H_l = self.U_l + (self.B_l - self.U_l) * np.exp( -1j*(self.theta0) )  # OH = OOU + OUH
@@ -161,8 +161,9 @@ class LegKinematics:
     def calculate_l4(self):
         self.theta = self.theta0
         # part of the forward kinematics
-        self.ang_OEA = np.arcsin( self.l1 / self.l_AE *np.sin(self.theta) )
-        self.E = self.l1 * np.cos(self.theta) - self.l_AE * np.cos(self.ang_OEA)
+        self.A_l = self.l1 * np.exp( 1j*(self.theta) )
+        self.ang_OEA = np.arcsin(abs(self.A_l.imag) / self.l_AE)
+        self.E = self.A_l.real - self.l_AE * np.cos(self.ang_OEA)   # OE = OA - EA
         self.D_l = self.E + self.l6 * np.exp( 1j*(self.ang_OEA) )
         # C is calculated for the case of theta = 17 deg.
         self.C_l = self.R * np.exp( 1j*(self.arc_BC + self.theta0) ) # OC = OH rotate arc_HC
