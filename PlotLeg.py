@@ -37,25 +37,25 @@ class LegAnimation(LegModel.LegModel):
                 self.arc = [arc, arc_out]   # inner & outer arcs
                 self.start = start          # start angle 
                 
-        def get_shape(self):
+        def get_shape(self, color='black'):
             # four rims (inner arc, outer arc, start angle)
-            self.upper_rim_r = self.rim( *self.get_arc(self.leg_model.F_r, self.leg_model.H_r, self.leg_model.U_r, 'black', self.r))
-            self.upper_rim_l = self.rim( *self.get_arc(self.leg_model.H_l, self.leg_model.F_l, self.leg_model.U_l, 'black', self.r))
-            self.lower_rim_r = self.rim( *self.get_arc(self.leg_model.G,   self.leg_model.F_r, self.leg_model.L_r, 'black', self.r))
-            self.lower_rim_l = self.rim( *self.get_arc(self.leg_model.F_l, self.leg_model.G,   self.leg_model.L_l, 'black', self.r))
+            self.upper_rim_r = self.rim( *self.get_arc(self.leg_model.F_r, self.leg_model.H_r, self.leg_model.U_r, color, self.r))
+            self.upper_rim_l = self.rim( *self.get_arc(self.leg_model.H_l, self.leg_model.F_l, self.leg_model.U_l, color, self.r))
+            self.lower_rim_r = self.rim( *self.get_arc(self.leg_model.G,   self.leg_model.F_r, self.leg_model.L_r, color, self.r))
+            self.lower_rim_l = self.rim( *self.get_arc(self.leg_model.F_l, self.leg_model.G,   self.leg_model.L_l, color, self.r))
             # five joints on the rims   (center, radius)
-            self.upper_joint_r = self.get_circle(self.leg_model.H_r, self.r) 
-            self.upper_joint_l = self.get_circle(self.leg_model.H_l, self.r) 
-            self.lower_joint_r = self.get_circle(self.leg_model.F_r, self.r) 
-            self.lower_joint_l = self.get_circle(self.leg_model.F_l, self.r) 
-            self.G_joint       = self.get_circle(self.leg_model.G,   self.r)
+            self.upper_joint_r = self.get_circle(self.leg_model.H_r, self.r, color) 
+            self.upper_joint_l = self.get_circle(self.leg_model.H_l, self.r, color) 
+            self.lower_joint_r = self.get_circle(self.leg_model.F_r, self.r, color) 
+            self.lower_joint_l = self.get_circle(self.leg_model.F_l, self.r, color) 
+            self.G_joint       = self.get_circle(self.leg_model.G,   self.r, color)
             # six bars  (point1, point2)
-            self.OB_bar_r = self.get_line(0, self.leg_model.B_r) 
-            self.OB_bar_l = self.get_line(0, self.leg_model.B_l) 
-            self.AE_bar_r = self.get_line(self.leg_model.A_r, self.leg_model.E)
-            self.AE_bar_l = self.get_line(self.leg_model.A_l, self.leg_model.E)
-            self.CD_bar_r = self.get_line(self.leg_model.C_r, self.leg_model.D_r)
-            self.CD_bar_l = self.get_line(self.leg_model.C_l, self.leg_model.D_l) 
+            self.OB_bar_r = self.get_line(0, self.leg_model.B_r, color) 
+            self.OB_bar_l = self.get_line(0, self.leg_model.B_l, color) 
+            self.AE_bar_r = self.get_line(self.leg_model.A_r, self.leg_model.E, color)
+            self.AE_bar_l = self.get_line(self.leg_model.A_l, self.leg_model.E, color)
+            self.CD_bar_r = self.get_line(self.leg_model.C_r, self.leg_model.D_r, color)
+            self.CD_bar_l = self.get_line(self.leg_model.C_l, self.leg_model.D_l, color) 
             
         def get_arc(self, p1, p2, o, color='black', offset=0.01):
             start = np.angle(p1-o, deg=True)
@@ -118,10 +118,10 @@ class LegAnimation(LegModel.LegModel):
             self.leg_shape.line_width = line_width
             
     #### Plot leg with current shape ####
-    def plot_leg(self, theta, beta, O, ax):
+    def plot_leg(self, theta, beta, O, ax, color='black'):
         # initialize all graphics 
         self.forward(theta, beta, vector=False)  # update to apply displacement of origin of leg.
-        self.leg_shape.get_shape()
+        self.leg_shape.get_shape(color)
         self.leg_shape.set_shape(O)  # set to apply displacement of origin of leg.
         self.center_line, = ax.plot([], [], linestyle='--', color='blue', linewidth=1)   # center line
         self.joint_points = [ ax.plot([], [], 'ko', markersize=self.leg_shape.mark_size)[0] for _ in range(5) ]   # five dots at the center of joints
@@ -142,17 +142,17 @@ class LegAnimation(LegModel.LegModel):
         return ax  
     
     #### Plot leg on one fig given from user ####
-    def plot_by_angle(self, theta=np.deg2rad(17.0), beta=0, O=np.array([0, 0]), ax=None): 
+    def plot_by_angle(self, theta=np.deg2rad(17.0), beta=0, O=np.array([0, 0]), ax=None, color='black'): 
         O = np.array(O)
         if ax is None:
             fig, ax = plt.subplots()
         # plot setting
         ax.set_aspect('equal')  # 座標比例相同
-        ax = self.plot_leg(theta, beta, O, ax)
+        ax = self.plot_leg(theta, beta, O, ax, color)
         return ax
 
     #### Plot leg by given foothold of G, lower rim, or upper rim ####
-    def plot_by_rim(self, foothold=np.array([0, 0]), O=np.array([0, 0]), rim='G', ax=None): 
+    def plot_by_rim(self, foothold=np.array([0, 0]), O=np.array([0, 0]), rim='G', ax=None, color='black'): 
         O = np.array(O)
         foothold = np.array(foothold)
         if rim == 'G':
@@ -172,7 +172,7 @@ class LegAnimation(LegModel.LegModel):
             fig, ax = plt.subplots()
         # plot setting
         ax.set_aspect('equal')  # 座標比例相同
-        ax = self.plot_leg(theta, beta, O, ax)
+        ax = self.plot_leg(theta, beta, O, ax, color)
         return ax
     
 
@@ -184,7 +184,7 @@ if __name__ == '__main__':
     ax = LegAnimation.plot_by_angle()
     ax = LegAnimation.plot_by_angle(np.deg2rad(130), np.deg2rad(-45), [0., 0.3], ax=ax)
     ax = LegAnimation.plot_by_rim([0.2, 0.0], [0.1, 0.3], rim='G', ax=ax)
-    ax = LegAnimation.plot_by_rim([0.6, 0.1], [0.5, 0.2], rim='lower', ax=ax)
+    ax = LegAnimation.plot_by_rim([0.6, 0.1], [0.5, 0.2], rim='lower', ax=ax, color='red')
     ax = LegAnimation.plot_by_rim([0.3, 0.1], [0.4, 0.2], rim='lower', ax=ax)
     LegAnimation.setting(mark_size=10, line_width=3)
     ax = LegAnimation.plot_by_rim([0.8, 0.0], [0.9, 0.12], rim='upper', ax=ax)
