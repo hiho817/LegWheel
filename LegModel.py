@@ -199,7 +199,7 @@ class LegModel:
     # Rim: the rim contacting ground of the corresponding theta and beta.
     # Alpha: alpha=0 when (theta, beta)=(17, 0). alpha=-2pi~2pi when lower or upper rim contact. alpha=alpha_G when G contact.
     # Height: distance between ground and hip.
-    def contact_map(self, theta, beta, slope=0.0):
+    def contact_map(self, theta, beta, slope=0.0, contact_upper=True, contact_lower=True):
         beta = np.array(beta) - slope
         self.forward(theta, beta, vector=False)
 
@@ -225,6 +225,12 @@ class LegModel:
             zeros
         ]
         arc_list = np.array(arc_list)
+        if not contact_upper:
+            arc_list[0][0] = 1.0
+            arc_list[4][0] = 1.0
+        if not contact_lower:
+            arc_list[1][0] = 1.0
+            arc_list[3][0] = 1.0
 
         self.rim = np.where(np.min(arc_list[:, 0], axis=0) == 0, 0, np.argmin(arc_list[:, 0], axis=0) + 1)
         self.alpha = arc_list[self.rim-1, 1] if self.n_elements == 0 else arc_list[self.rim-1, 1, np.arange(self.n_elements)]
@@ -316,31 +322,32 @@ class LegModel:
     # Assume ground slope is 0 and the leg is currently contacting the ground.
     # Input move_vec: vector of hip movement [delta x, delta y]
     def move(self, theta, beta, move_vec, slope=0.0, contact_upper=True, contact_lower=True):
-        self.contact_map(theta, beta, slope) # also get all joint positions in polar coordinate (x+jy).
+        self.contact_map(theta, beta, slope=slope, contact_upper=contact_upper, contact_lower=contact_lower)    # also get all joint positions in polar coordinate (x+jy).
+        contact_rim = self.rim
         if slope != 0.0:
             x_new = move_vec[0]*np.cos(-slope) - move_vec[1]*np.sin(-slope)
             y_new = move_vec[0]*np.sin(-slope) + move_vec[1]*np.cos(-slope)
             move_vec[0] = x_new
             move_vec[1] = y_new
 
-        
-        if contact_upper and contact_lower:   # if both upper and lower rims can contact ground, set lowest point as contact point.
-            contact_rim = self.rim
-        elif contact_upper: # if lower rim can not contact ground, set contact point to right or left upper rim depend on beta.  
-            if self.beta > 0:
-                contact_rim = 1
-            else:   # beta < 0
-                contact_rim = 5
-        elif contact_lower: # if upper rim can not contact ground, set lowest point among lower rim and G as contact point.
-            if self.rim in [2, 3, 4]:
-                contact_rim = self.rim
-            elif self.beta > 0:
-                contact_rim = 2
-            else:   # beta < 0
-                contact_rim = 4
-        else:
-            print("You are considering the leg has no contact, thus return input theta/beta.")
-            return theta, beta
+        #### Solve in contact_map ####
+        # if contact_upper and contact_lower:   # if both upper and lower rims can contact ground, set lowest point as contact point.
+        #     contact_rim = self.rim
+        # elif contact_upper: # if lower rim can not contact ground, set contact point to right or left upper rim depend on beta.  
+        #     if self.beta > 0:
+        #         contact_rim = 1
+        #     else:   # beta < 0
+        #         contact_rim = 5
+        # elif contact_lower: # if upper rim can not contact ground, set lowest point among lower rim and G as contact point.
+        #     if self.rim in [2, 3, 4]:
+        #         contact_rim = self.rim
+        #     elif self.beta > 0:
+        #         contact_rim = 2
+        #     else:   # beta < 0
+        #         contact_rim = 4
+        # else:
+        #     print("You are considering the leg has no contact, thus return input theta/beta.")
+        #     return theta, beta
         
         result, infodict, ier, mesg = fsolve(lambda d_q: self.objective(d_q, (self.theta, self.beta), move_vec, contact_rim), np.array([0, 0]), full_output=True)     
         assert ier, "Not converge. Not found a feasible solution for the disired hip position."
