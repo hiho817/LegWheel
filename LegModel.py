@@ -324,6 +324,12 @@ class LegModel:
     def move(self, theta, beta, move_vec, slope=0.0, contact_upper=True, contact_lower=True):
         self.contact_map(theta, beta, slope=slope, contact_upper=contact_upper, contact_lower=contact_lower)    # also get all joint positions in polar coordinate (x+jy).
         contact_rim = self.rim
+        self.current_alpha = self.alpha
+        self.current_U_l = np.array([self.U_l.real, self.U_l.imag])
+        self.current_L_l = np.array([self.L_l.real, self.L_l.imag])
+        self.current_G   = np.array([self.G.real  , self.G.imag])
+        self.current_L_r = np.array([self.L_r.real, self.L_r.imag])
+        self.current_U_r = np.array([self.U_r.real, self.U_r.imag])
         if slope != 0.0:
             x_new = move_vec[0]*np.cos(-slope) - move_vec[1]*np.sin(-slope)
             y_new = move_vec[0]*np.sin(-slope) + move_vec[1]*np.cos(-slope)
@@ -349,74 +355,145 @@ class LegModel:
         #     print("You are considering the leg has no contact, thus return input theta/beta.")
         #     return theta, beta
         
-        result, infodict, ier, mesg = fsolve(lambda d_q: self.objective(d_q, (self.theta, self.beta), move_vec, contact_rim), np.array([0, 0]), full_output=True)     
+        result, infodict, ier, mesg = fsolve(lambda d_q: self.objective(d_q, (theta, beta), move_vec, contact_rim), np.array([0, 0]), full_output=True)     
         assert ier, "Not converge. Not found a feasible solution for the disired hip position."
         # if np.linalg.norm(infodict['fvec']) > np.linalg.norm(move_v):    # if distance between hip_d and calculated position > distance between hip_d and hip_c -> error, not found a feasible solution.
             # raise RuntimeError("Not found a feasible solution for the disired hip position.")
             
         d_theta, d_beta = result
-        self.theta += d_theta
-        self.beta  += d_beta + slope
+        self.theta = theta+d_theta
+        self.beta  = beta+d_beta + slope
         return self.theta, self.beta
 
     # Objective function for move
     def objective(self, d_q, current_q, move_vec, contact_rim): # [d_teata, d_beta], [current_teata, current_beta], [delta x, delta y]
         guessed_q = current_q + d_q    # guessed next [theta, beta]
-        
-        # Assume current hip at [0, 0], solve for theta/beta such that next hip at move_v = next foothold - P, where P is contact point relative to hip and next foothold = current foothold + rolling distance.
+        self.contact_map(*guessed_q)    # also get all joint positions in polar coordinate (x+jy).
+        d_alpha = self.alpha - self.current_alpha   # delta alpha = next alpha - current alpha
+        cross_d = 0.0
+
         if contact_rim == 1:    # left upper rim
-            current_F_exp = ( F_l_poly[0](current_q[0])+1j*F_l_poly[1](current_q[0]) ) *np.exp( 1j*(current_q[1]) )  # current left F          , in current hip coordinate (current hip at [0, 0])
-            current_U_exp = ( U_l_poly[0](current_q[0])+1j*U_l_poly[1](current_q[0]) ) *np.exp( 1j*(current_q[1]) )  # current upper rim center, in current hip coordinate (current hip at [0, 0])
-            guessed_F_exp = ( F_l_poly[0](guessed_q[0])+1j*F_l_poly[1](guessed_q[0]) ) *np.exp( 1j*(guessed_q[1]) )  # guessed left F          , in guessed next hip coordinate (next hip at 0+j0)
-            guessed_U_exp = ( U_l_poly[0](guessed_q[0])+1j*U_l_poly[1](guessed_q[0]) ) *np.exp( 1j*(guessed_q[1]) )  # guessed upper rim center, in guessed next hip coordinate (next hip at 0+j0)
-            d_alpha = np.angle( -1j/(guessed_F_exp - guessed_U_exp) ) - np.angle( -1j/(current_F_exp - current_U_exp) )   # delta alpha = next alpha - current alpha
-            roll_d = d_alpha * self.radius  # rolling distance caused by rotation of contact point
-            next_U    = np.array([current_U_exp.real, current_U_exp.imag]) + np.array([roll_d, 0])   # next_U = current_U + rolling distance, in current hip coordinate (current hip at [0, 0])
-            guessed_U = np.array([guessed_U_exp.real, guessed_U_exp.imag])  # in guessed next hip coordinate (next hip at [0, 0])
-            guessed_hip = next_U - guessed_U
+            if self.rim == 1:
+                roll_d = d_alpha * self.radius  # rolling distance caused by rotation of contact point
+                current_P    = self.current_U_l   # next_U = current_U + rolling distance, in current hip coordinate (current hip at [0, 0])
+                guessed_P = np.array([self.U_l.real, self.U_l.imag])  # in guessed next hip coordinate (next hip at [0, 0])
+            elif self.rim == 2:
+                pass
+            else:
+                raise RuntimeError("The leg cross two rims with one step.")
         elif contact_rim == 2:    # left lower rim
-            current_G_exp = 1j*G_poly[1](current_q[0]) *np.exp( 1j*(current_q[1]) )  # current G, in current hip coordinate (current hip at [0, 0])
-            current_L_exp = ( L_l_poly[0](current_q[0])+1j*L_l_poly[1](current_q[0]) ) *np.exp( 1j*(current_q[1]) )  # current lower rim center, in current hip coordinate (current hip at [0, 0])
-            guessed_G_exp = 1j*G_poly[1](guessed_q[0]) *np.exp( 1j*(guessed_q[1]) )  # in guessed next hip coordinate (next hip at 0+j0)
-            guessed_L_exp = ( L_l_poly[0](guessed_q[0])+1j*L_l_poly[1](guessed_q[0]) ) *np.exp( 1j*(guessed_q[1]) )  # guessed lower rim center, in guessed next hip coordinate (next hip at 0+j0)
-            d_alpha = np.angle( -1j/(guessed_G_exp - guessed_L_exp) ) - np.angle( -1j/(current_G_exp - current_L_exp) )   # delta alpha = next alpha - current alpha
-            roll_d = d_alpha * self.radius  # rolling distance caused by rotation of contact point
-            next_L    = np.array([current_L_exp.real, current_L_exp.imag]) + np.array([roll_d, 0])   # next_L = current_L + rolling distance, in current hip coordinate (current hip at [0, 0])
-            guessed_L = np.array([guessed_L_exp.real, guessed_L_exp.imag])  # in guessed next hip coordinate (next hip at [0, 0])
-            guessed_hip = next_L - guessed_L
+            if self.rim == 2:
+                roll_d = d_alpha * self.radius  # rolling distance caused by rotation of contact point
+                current_P    = self.current_L_l   # next_U = current_U + rolling distance, in current hip coordinate (current hip at [0, 0])
+                guessed_P = np.array([self.L_l.real, self.L_l.imag])  # in guessed next hip coordinate (next hip at [0, 0])
+            elif self.rim == 1:
+                pass
+            elif self.rim == 3:
+                roll_d = -self.current_alpha*self.radius + self.alpha*self.r  # rolling distance caused by rotation of contact point
+                cross_d = self.current_G - self.current_L_l 
+                current_P    = self.current_L_l   # next_U = current_U + rolling distance, in current hip coordinate (current hip at [0, 0])
+                guessed_P = np.array([self.G.real, self.G.imag])  # in guessed next hip coordinate (next hip at [0, 0])
+            else:
+                raise RuntimeError("The leg cross two rims with one step.")
         elif contact_rim == 3:    # G
-            current_G_exp = 1j*G_poly[1](current_q[0]) *np.exp( 1j*(current_q[1]) )  # current G, in current hip coordinate (current hip at [0, 0])
-            current_L_exp = ( L_l_poly[0](current_q[0])+1j*L_l_poly[1](current_q[0]) ) *np.exp( 1j*(current_q[1]) )  # current lower rim center, in current hip coordinate (current hip at [0, 0])
-            guessed_G_exp = 1j*G_poly[1](guessed_q[0]) *np.exp( 1j*(guessed_q[1]) )  # in guessed next hip coordinate (next hip at 0+j0)
-            guessed_L_exp = ( L_l_poly[0](guessed_q[0])+1j*L_l_poly[1](guessed_q[0]) ) *np.exp( 1j*(guessed_q[1]) )  # guessed lower rim center, in guessed next hip coordinate (next hip at 0+j0)
-            d_alpha = np.angle( -1j/(guessed_G_exp - guessed_L_exp) ) - np.angle( -1j/(current_G_exp - current_L_exp) )   # delta alpha = next alpha - current alpha
-            roll_d = d_alpha * self.r  # rolling distance caused by rotation of contact point
-            next_G    = np.array([current_G_exp.real, current_G_exp.imag]) + np.array([roll_d, 0])   # next_G = current_G + rolling distance, in current hip coordinate (current hip at [0, 0])
-            guessed_G = np.array([guessed_G_exp.real, guessed_G_exp.imag])  # in guessed next hip coordinate (next hip at [0, 0])
-            guessed_hip = next_G - guessed_G
+            if self.rim == 3:
+                roll_d = d_alpha * self.r  # rolling distance caused by rotation of contact point
+                current_P    = self.current_G    # next_G = current_G + rolling distance, in current hip coordinate (current hip at [0, 0])
+                guessed_P = np.array([self.G.real  , self.G.imag])  # in guessed next hip coordinate (next hip at [0, 0])
+            elif self.rim == 2:
+                roll_d = -self.current_alpha*self.r + self.alpha*self.radius  # rolling distance caused by rotation of contact point
+                cross_d = self.current_G - self.current_L_l
+                current_P    = self.current_L_l   # next_U = current_U + rolling distance, in current hip coordinate (current hip at [0, 0])
+                guessed_P = np.array([self.L_l.real, self.L_l.imag])  # in guessed next hip coordinate (next hip at [0, 0])
+            elif self.rim == 4:
+                roll_d = self.current_alpha*self.r + self.alpha*self.radius  # rolling distance caused by rotation of contact point
+                cross_d = self.current_L_r - self.current_G
+                current_P    = self.current_G   # next_U = current_U + rolling distance, in current hip coordinate (current hip at [0, 0])
+                guessed_P = np.array([self.L_r.real, self.L_r.imag])  # in guessed next hip coordinate (next hip at [0, 0])
+            else:
+                raise RuntimeError("The leg cross two rims with one step.")
         elif contact_rim == 4:    # right lower rim
-            current_G_exp = 1j*G_poly[1](current_q[0]) *np.exp( 1j*(current_q[1]) )  # current G, in current hip coordinate (current hip at [0, 0])
-            current_L_exp = ( L_r_poly[0](current_q[0])+1j*L_r_poly[1](current_q[0]) ) *np.exp( 1j*(current_q[1]) )  # current lower rim center, in current hip coordinate (current hip at [0, 0])
-            guessed_G_exp = 1j*G_poly[1](guessed_q[0]) *np.exp( 1j*(guessed_q[1]) )  # in guessed next hip coordinate (next hip at 0+j0)
-            guessed_L_exp = ( L_r_poly[0](guessed_q[0])+1j*L_r_poly[1](guessed_q[0]) ) *np.exp( 1j*(guessed_q[1]) )  # guessed lower rim center, in guessed next hip coordinate (next hip at 0+j0)
-            d_alpha = np.angle( -1j/(guessed_G_exp - guessed_L_exp) ) - np.angle( -1j/(current_G_exp - current_L_exp) )   # delta alpha = next alpha - current alpha
-            roll_d = d_alpha * self.radius  # rolling distance caused by rotation of contact point
-            next_L    = np.array([current_L_exp.real, current_L_exp.imag]) + np.array([roll_d, 0])   # next_L = current_L + rolling distance, in current hip coordinate (current hip at [0, 0])
-            guessed_L = np.array([guessed_L_exp.real, guessed_L_exp.imag])  # in guessed next hip coordinate (next hip at [0, 0])
-            guessed_hip = next_L - guessed_L
+            if self.rim == 4:
+                roll_d = d_alpha * self.radius  # rolling distance caused by rotation of contact point
+                current_P    = self.current_L_r + np.array([roll_d, 0])   # next_L = current_L + rolling distance, in current hip coordinate (current hip at [0, 0])
+                guessed_P = np.array([self.L_r.real, self.L_r.imag])  # in guessed next hip coordinate (next hip at [0, 0])
+            elif self.rim == 5:
+                pass
+            elif self.rim == 3:
+                roll_d = -self.current_alpha*self.radius - self.alpha*self.r  # rolling distance caused by rotation of contact point
+                cross_d = self.current_G - self.current_L_r
+                current_P    = self.current_L_r   # next_U = current_U + rolling distance, in current hip coordinate (current hip at [0, 0])
+                guessed_P = np.array([self.G.real, self.G.imag])  # in guessed next hip coordinate (next hip at [0, 0])
+            else:
+                raise RuntimeError("The leg cross two rims with one step.")
         elif contact_rim == 5:    # right upper rim
-            current_F_exp = ( F_r_poly[0](current_q[0])+1j*F_r_poly[1](current_q[0]) ) *np.exp( 1j*(current_q[1]) )  # current right F         , in current hip coordinate (current hip at [0, 0])
-            current_U_exp = ( U_r_poly[0](current_q[0])+1j*U_r_poly[1](current_q[0]) ) *np.exp( 1j*(current_q[1]) )  # current upper rim center, in current hip coordinate (current hip at [0, 0])
-            guessed_F_exp = ( F_r_poly[0](guessed_q[0])+1j*F_r_poly[1](guessed_q[0]) ) *np.exp( 1j*(guessed_q[1]) )  # guessed right F         , in guessed next hip coordinate (next hip at 0+j0)
-            guessed_U_exp = ( U_r_poly[0](guessed_q[0])+1j*U_r_poly[1](guessed_q[0]) ) *np.exp( 1j*(guessed_q[1]) )  # guessed upper rim center, in guessed next hip coordinate (next hip at 0+j0)
-            d_alpha = np.angle( -1j/(guessed_F_exp - guessed_U_exp) ) - np.angle( -1j/(current_F_exp - current_U_exp) )   # delta alpha = next alpha - current alpha
-            roll_d = d_alpha * self.radius  # rolling distance caused by rotation of contact point
-            next_U    = np.array([current_U_exp.real, current_U_exp.imag]) + np.array([roll_d, 0])   # next_U = current_U + rolling distance, in current hip coordinate (current hip at [0, 0])
-            guessed_U = np.array([guessed_U_exp.real, guessed_U_exp.imag])  # in guessed next hip coordinate (next hip at [0, 0])
-            guessed_hip = next_U - guessed_U
+            if self.rim == 5:
+                roll_d = d_alpha * self.radius  # rolling distance caused by rotation of contact point
+                current_P    = self.current_U_r + np.array([roll_d, 0])   # next_U = current_U + rolling distance, in current hip coordinate (current hip at [0, 0])
+                guessed_P = np.array([self.U_r.real, self.U_r.imag])  # in guessed next hip coordinate (next hip at [0, 0])
+            elif self.rim == 4:
+                pass
+            else:
+                raise RuntimeError("The leg cross two rims with one step.")
         else:
             raise RuntimeError("The leg dosen't contact ground.")
         
+        guessed_hip = current_P - guessed_P + np.array([roll_d - cross_d, 0])
+        # # Assume current hip at [0, 0], solve for theta/beta such that next hip at move_v = next foothold - P, where P is contact point relative to hip and next foothold = current foothold + rolling distance.
+        # if contact_rim == 1:    # left upper rim
+        #     current_F_exp = ( F_l_poly[0](current_q[0])+1j*F_l_poly[1](current_q[0]) ) *np.exp( 1j*(current_q[1]) )  # current left F          , in current hip coordinate (current hip at [0, 0])
+        #     current_U_exp = ( U_l_poly[0](current_q[0])+1j*U_l_poly[1](current_q[0]) ) *np.exp( 1j*(current_q[1]) )  # current upper rim center, in current hip coordinate (current hip at [0, 0])
+        #     guessed_F_exp = ( F_l_poly[0](guessed_q[0])+1j*F_l_poly[1](guessed_q[0]) ) *np.exp( 1j*(guessed_q[1]) )  # guessed left F          , in guessed next hip coordinate (next hip at 0+j0)
+        #     guessed_U_exp = ( U_l_poly[0](guessed_q[0])+1j*U_l_poly[1](guessed_q[0]) ) *np.exp( 1j*(guessed_q[1]) )  # guessed upper rim center, in guessed next hip coordinate (next hip at 0+j0)
+        #     d_alpha = np.angle( -1j/(guessed_F_exp - guessed_U_exp) ) - np.angle( -1j/(current_F_exp - current_U_exp) )   # delta alpha = next alpha - current alpha
+        #     roll_d = d_alpha * self.radius  # rolling distance caused by rotation of contact point
+        #     next_U    = np.array([current_U_exp.real, current_U_exp.imag]) + np.array([roll_d, 0])   # next_U = current_U + rolling distance, in current hip coordinate (current hip at [0, 0])
+        #     guessed_U = np.array([guessed_U_exp.real, guessed_U_exp.imag])  # in guessed next hip coordinate (next hip at [0, 0])
+        #     guessed_hip = next_U - guessed_U
+        # elif contact_rim == 2:    # left lower rim
+        #     current_G_exp = 1j*G_poly[1](current_q[0]) *np.exp( 1j*(current_q[1]) )  # current G, in current hip coordinate (current hip at [0, 0])
+        #     current_L_exp = ( L_l_poly[0](current_q[0])+1j*L_l_poly[1](current_q[0]) ) *np.exp( 1j*(current_q[1]) )  # current lower rim center, in current hip coordinate (current hip at [0, 0])
+        #     guessed_G_exp = 1j*G_poly[1](guessed_q[0]) *np.exp( 1j*(guessed_q[1]) )  # in guessed next hip coordinate (next hip at 0+j0)
+        #     guessed_L_exp = ( L_l_poly[0](guessed_q[0])+1j*L_l_poly[1](guessed_q[0]) ) *np.exp( 1j*(guessed_q[1]) )  # guessed lower rim center, in guessed next hip coordinate (next hip at 0+j0)
+        #     d_alpha = np.angle( -1j/(guessed_G_exp - guessed_L_exp) ) - np.angle( -1j/(current_G_exp - current_L_exp) )   # delta alpha = next alpha - current alpha
+        #     roll_d = d_alpha * self.radius  # rolling distance caused by rotation of contact point
+        #     next_L    = np.array([current_L_exp.real, current_L_exp.imag]) + np.array([roll_d, 0])   # next_L = current_L + rolling distance, in current hip coordinate (current hip at [0, 0])
+        #     guessed_L = np.array([guessed_L_exp.real, guessed_L_exp.imag])  # in guessed next hip coordinate (next hip at [0, 0])
+        #     guessed_hip = next_L - guessed_L
+        # elif contact_rim == 3:    # G
+        #     current_G_exp = 1j*G_poly[1](current_q[0]) *np.exp( 1j*(current_q[1]) )  # current G, in current hip coordinate (current hip at [0, 0])
+        #     current_L_exp = ( L_l_poly[0](current_q[0])+1j*L_l_poly[1](current_q[0]) ) *np.exp( 1j*(current_q[1]) )  # current lower rim center, in current hip coordinate (current hip at [0, 0])
+        #     guessed_G_exp = 1j*G_poly[1](guessed_q[0]) *np.exp( 1j*(guessed_q[1]) )  # in guessed next hip coordinate (next hip at 0+j0)
+        #     guessed_L_exp = ( L_l_poly[0](guessed_q[0])+1j*L_l_poly[1](guessed_q[0]) ) *np.exp( 1j*(guessed_q[1]) )  # guessed lower rim center, in guessed next hip coordinate (next hip at 0+j0)
+        #     d_alpha = np.angle( -1j/(guessed_G_exp - guessed_L_exp) ) - np.angle( -1j/(current_G_exp - current_L_exp) )   # delta alpha = next alpha - current alpha
+        #     roll_d = d_alpha * self.r  # rolling distance caused by rotation of contact point
+        #     next_G    = np.array([current_G_exp.real, current_G_exp.imag]) + np.array([roll_d, 0])   # next_G = current_G + rolling distance, in current hip coordinate (current hip at [0, 0])
+        #     guessed_G = np.array([guessed_G_exp.real, guessed_G_exp.imag])  # in guessed next hip coordinate (next hip at [0, 0])
+        #     guessed_hip = next_G - guessed_G
+        # elif contact_rim == 4:    # right lower rim
+        #     current_G_exp = 1j*G_poly[1](current_q[0]) *np.exp( 1j*(current_q[1]) )  # current G, in current hip coordinate (current hip at [0, 0])
+        #     current_L_exp = ( L_r_poly[0](current_q[0])+1j*L_r_poly[1](current_q[0]) ) *np.exp( 1j*(current_q[1]) )  # current lower rim center, in current hip coordinate (current hip at [0, 0])
+        #     guessed_G_exp = 1j*G_poly[1](guessed_q[0]) *np.exp( 1j*(guessed_q[1]) )  # in guessed next hip coordinate (next hip at 0+j0)
+        #     guessed_L_exp = ( L_r_poly[0](guessed_q[0])+1j*L_r_poly[1](guessed_q[0]) ) *np.exp( 1j*(guessed_q[1]) )  # guessed lower rim center, in guessed next hip coordinate (next hip at 0+j0)
+        #     d_alpha = np.angle( -1j/(guessed_G_exp - guessed_L_exp) ) - np.angle( -1j/(current_G_exp - current_L_exp) )   # delta alpha = next alpha - current alpha
+        #     roll_d = d_alpha * self.radius  # rolling distance caused by rotation of contact point
+        #     next_L    = np.array([current_L_exp.real, current_L_exp.imag]) + np.array([roll_d, 0])   # next_L = current_L + rolling distance, in current hip coordinate (current hip at [0, 0])
+        #     guessed_L = np.array([guessed_L_exp.real, guessed_L_exp.imag])  # in guessed next hip coordinate (next hip at [0, 0])
+        #     guessed_hip = next_L - guessed_L
+        # elif contact_rim == 5:    # right upper rim
+        #     current_F_exp = ( F_r_poly[0](current_q[0])+1j*F_r_poly[1](current_q[0]) ) *np.exp( 1j*(current_q[1]) )  # current right F         , in current hip coordinate (current hip at [0, 0])
+        #     current_U_exp = ( U_r_poly[0](current_q[0])+1j*U_r_poly[1](current_q[0]) ) *np.exp( 1j*(current_q[1]) )  # current upper rim center, in current hip coordinate (current hip at [0, 0])
+        #     guessed_F_exp = ( F_r_poly[0](guessed_q[0])+1j*F_r_poly[1](guessed_q[0]) ) *np.exp( 1j*(guessed_q[1]) )  # guessed right F         , in guessed next hip coordinate (next hip at 0+j0)
+        #     guessed_U_exp = ( U_r_poly[0](guessed_q[0])+1j*U_r_poly[1](guessed_q[0]) ) *np.exp( 1j*(guessed_q[1]) )  # guessed upper rim center, in guessed next hip coordinate (next hip at 0+j0)
+        #     d_alpha = np.angle( -1j/(guessed_F_exp - guessed_U_exp) ) - np.angle( -1j/(current_F_exp - current_U_exp) )   # delta alpha = next alpha - current alpha
+        #     roll_d = d_alpha * self.radius  # rolling distance caused by rotation of contact point
+        #     next_U    = np.array([current_U_exp.real, current_U_exp.imag]) + np.array([roll_d, 0])   # next_U = current_U + rolling distance, in current hip coordinate (current hip at [0, 0])
+        #     guessed_U = np.array([guessed_U_exp.real, guessed_U_exp.imag])  # in guessed next hip coordinate (next hip at [0, 0])
+        #     guessed_hip = next_U - guessed_U
+        # else:
+        #     raise RuntimeError("The leg dosen't contact ground.")
+        
+        print(guessed_hip - move_vec)
         return guessed_hip - move_vec
     
 
