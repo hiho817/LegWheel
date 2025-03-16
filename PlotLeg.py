@@ -25,6 +25,7 @@ class PlotLeg(LegModel.LegModel):
             self.fig_size = 10
             self.mark_size = 2.0
             self.line_width = 1.0
+            self.zorder = 1.0
             self.color = "black"
             self.get_shape()
             
@@ -57,16 +58,16 @@ class PlotLeg(LegModel.LegModel):
             start = np.angle(p1-o, deg=True)
             end = np.angle(p2-o, deg=True)
             radius = np.abs(p1-o)
-            arc = Arc([o.real, o.imag], 2*(radius-offset), 2*(radius-offset), angle=0.0, theta1=start, theta2=end, color=self.color, linewidth=self.line_width)
-            arc_out = Arc([o.real, o.imag], 2*(radius+offset), 2*(radius+offset), angle=0.0, theta1=start, theta2=end, color=self.color, linewidth=self.line_width)
+            arc = Arc([o.real, o.imag], 2*(radius-offset), 2*(radius-offset), angle=0.0, theta1=start, theta2=end, color=self.color, linewidth=self.line_width, zorder=self.zorder)
+            arc_out = Arc([o.real, o.imag], 2*(radius+offset), 2*(radius+offset), angle=0.0, theta1=start, theta2=end, color=self.color, linewidth=self.line_width, zorder=self.zorder)
             return arc, arc_out, start
 
         def get_circle(self, o, r):
-            circle = Arc([o.real, o.imag], 2*r, 2*r, angle=0.0, theta1=0, theta2=360, color=self.color, linewidth=self.line_width)
+            circle = Arc([o.real, o.imag], 2*r, 2*r, angle=0.0, theta1=0, theta2=360, color=self.color, linewidth=self.line_width, zorder=self.zorder)
             return circle
 
         def get_line(self, p1, p2):
-            line = Line2D([p1.real, p2.real], [p1.imag, p2.imag], marker='o', markersize=self.mark_size, linestyle='-', color=self.color, linewidth=self.line_width)
+            line = Line2D([p1.real, p2.real], [p1.imag, p2.imag], marker='o', markersize=self.mark_size, linestyle='-', color=self.color, linewidth=self.line_width, zorder=self.zorder)
             return line
         
         ## Set Postion Of Leg ##  
@@ -105,7 +106,7 @@ class PlotLeg(LegModel.LegModel):
 
         
     ## Parameters Setting ##
-    def setting(self, fig_size=-1, mark_size=-1, line_width=-1, color=None):
+    def setting(self, fig_size=-1, mark_size=-1, line_width=-1, color=None, zorder=None):
         if fig_size != -1:
             self.leg_shape.fig_size = fig_size
         if mark_size != -1:
@@ -114,6 +115,8 @@ class PlotLeg(LegModel.LegModel):
             self.leg_shape.line_width = line_width
         if color != None:
             self.leg_shape.color = color
+        if zorder != None:
+            self.leg_shape.zorder = zorder
             
     #### Plot leg with current shape ####
     def plot_leg(self, theta, beta, O, ax):
@@ -122,7 +125,7 @@ class PlotLeg(LegModel.LegModel):
         self.leg_shape.get_shape()
         self.leg_shape.set_shape(O)  # set to apply displacement of origin of leg.
         # self.center_line, = ax.plot([], [], linestyle='--', color='blue', linewidth=1)   # center line (Axis of Symmetry)
-        self.joint_points = [ ax.plot([], [], marker='o', color=self.leg_shape.color, markersize=self.leg_shape.mark_size)[0] for _ in range(5) ]   # five dots at the center of joints
+        self.joint_points = [ ax.plot([], [], marker='o', color=self.leg_shape.color, markersize=self.leg_shape.mark_size, zorder=self.leg_shape.zorder)[0] for _ in range(5) ]   # five dots at the center of joints
         # add leg part to the plot
         for key, value in self.leg_shape.__dict__.items():
             if "rim" in key:
