@@ -172,8 +172,8 @@ if animate:
     divide = sampling//fps
     fig, ax = plt.subplots( figsize=(10, 5) )
 
-    Animation = PlotLeg.LegAnimation(sim=sim)
-    Animation.setting()
+    plot_leg = PlotLeg.plot_leg(sim=sim)
+    plot_leg.setting()
         
     number_command = theta_list.shape[1]
     def plot_update(frame):
@@ -193,7 +193,7 @@ if animate:
         
         plt.plot(*(( hip_list[0, frame*divide]+ hip_list[2, frame*divide])/2), 'P', color="orange", ms=10, mec='k') # center of mass    
         for i in range(4):
-            ax = Animation.plot_leg(theta_list[i, frame*divide], beta_list[i, frame*divide], hip_list[i, frame*divide, :], ax)
+            ax = plot_leg.plot_leg(theta_list[i, frame*divide], beta_list[i, frame*divide], hip_list[i, frame*divide, :], ax)
 
     ani = FuncAnimation(fig, plot_update, frames=number_command//divide)
     ani.save(output_file_name + ".mp4", fps=fps)
