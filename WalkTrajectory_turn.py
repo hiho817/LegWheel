@@ -172,7 +172,7 @@ if animate:
     divide = sampling//fps
     fig, ax = plt.subplots( figsize=(10, 5) )
 
-    plot_leg = PlotLeg.plot_leg(sim=sim)
+    plot_leg = PlotLeg.PlotLeg(sim=sim)
     plot_leg.setting()
         
     number_command = theta_list.shape[1]
