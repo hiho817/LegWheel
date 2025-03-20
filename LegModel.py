@@ -392,9 +392,9 @@ class LegModel:
             guessed_hip = next_L - guessed_L
         elif contact_rim == 3:    # G
             current_G_exp = 1j*G_poly[1](current_q[0]) *np.exp( 1j*(current_q[1]) )  # current G, in current hip coordinate (current hip at [0, 0])
-            current_L_exp = ( L_l_poly[0](current_q[0])+1j*L_l_poly[1](current_q[0]) ) *np.exp( 1j*(current_q[1]) )  # current lower rim center, in current hip coordinate (current hip at [0, 0])
+            current_L_exp = ( L_r_poly[0](current_q[0])+1j*L_r_poly[1](current_q[0]) ) *np.exp( 1j*(current_q[1]) )  # current lower rim center, in current hip coordinate (current hip at [0, 0])
             guessed_G_exp = 1j*G_poly[1](guessed_q[0]) *np.exp( 1j*(guessed_q[1]) )  # in guessed next hip coordinate (next hip at 0+j0)
-            guessed_L_exp = ( L_l_poly[0](guessed_q[0])+1j*L_l_poly[1](guessed_q[0]) ) *np.exp( 1j*(guessed_q[1]) )  # guessed lower rim center, in guessed next hip coordinate (next hip at 0+j0)
+            guessed_L_exp = ( L_r_poly[0](guessed_q[0])+1j*L_r_poly[1](guessed_q[0]) ) *np.exp( 1j*(guessed_q[1]) )  # guessed lower rim center, in guessed next hip coordinate (next hip at 0+j0)
             d_alpha = np.angle( -1j/(guessed_G_exp - guessed_L_exp) ) - np.angle( -1j/(current_G_exp - current_L_exp) )   # delta alpha = next alpha - current alpha
             roll_d = d_alpha * self.r  # rolling distance caused by rotation of contact point
             next_G    = np.array([current_G_exp.real, current_G_exp.imag]) + np.array([roll_d, 0])   # next_G = current_G + rolling distance, in current hip coordinate (current hip at [0, 0])
