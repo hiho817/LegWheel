@@ -259,8 +259,8 @@ class LegModel:
             bias_alpha = 0
         elif rim == 'G':
             # direction_G = p1
-            # bias_alpha = np.angle( (p1 - O)/direction_G )
-            bias_alpha = 0
+            bias_alpha = np.angle( (p1-O) / (p2-O) )
+            # bias_alpha = 0
         elif rim == 'right lower':
             bias_alpha = np.deg2rad(0)
             bias_alpha = 0
