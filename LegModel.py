@@ -551,22 +551,22 @@ if __name__ == '__main__':
     print("==========Inverse for G==========")
     G_p = [0.05, -0.25]
     print("Input G:", G_p)
-    legmodel.inverse(G_p, 'G')  # can also use " theta, beta = legmodel.inverse(G_p, 'G') "
-    print("Output theta, beta (degree):", np.rad2deg(legmodel.theta), np.rad2deg(legmodel.beta))
+    theta, beta = legmodel.inverse(G_p, 'G')  # use " theta, beta = legmodel.inverse(G_p, 'G') "
+    print("Output theta, beta (degree):", theta, np.rad2deg(beta))
     print("Output G:", legmodel.G)
     # inverse for left upper rim
     print("==========Inverse for U_l==========")
     Ul_p = [-0.01, -0.015]
     print("Input U_l:", Ul_p)
-    legmodel.inverse(Ul_p, 'U_l')
-    print("Output theta, beta (degree):", np.rad2deg(legmodel.theta), np.rad2deg(legmodel.beta))
+    theta, beta = legmodel.inverse(Ul_p, 'U_l')
+    print("Output theta, beta (degree):", np.rad2deg(theta), np.rad2deg(beta))
     print("Output U_l:", legmodel.U_l)
     # inverse for right lower rim
     print("==========Inverse for L_r==========")
     Lr_p = [-0.01, -0.015]
     print("Input L_r:", Lr_p)
-    legmodel.inverse(Lr_p, 'L_r')
-    print("Output theta, beta (degree):", np.rad2deg(legmodel.theta), np.rad2deg(legmodel.beta))
+    theta, beta = legmodel.inverse(Lr_p, 'L_r')
+    print("Output theta, beta (degree):", np.rad2deg(theta), np.rad2deg(beta))
     print("Output L_r:", legmodel.L_r)
 
     #### Move ####
