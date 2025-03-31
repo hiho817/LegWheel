@@ -252,21 +252,21 @@ class LegModel:
         
         # mapping alpha from 0~130/50 to -2*pi~2*pi
         if rim == 'left upper':
-            bias_alpha = -np.deg2rad(180)
-            bias_alpha = 0
+            bias_alpha = - np.deg2rad(180)
+            # bias_alpha = 0
         elif rim == 'left lower':
-            bias_alpha = -np.deg2rad(50)
-            bias_alpha = 0
+            bias_alpha = - np.deg2rad(50)
+            # bias_alpha = 0
         elif rim == 'G':
             # direction_G = p1
-            bias_alpha = np.angle( (p1-O) / (p2-O) )
-            # bias_alpha = 0
+            # bias_alpha = np.angle( (p1-O) / (p2-O) )
+            bias_alpha = 0
         elif rim == 'right lower':
             bias_alpha = np.deg2rad(0)
-            bias_alpha = 0
+            # bias_alpha = 0
         elif rim == 'right upper':
             bias_alpha = np.deg2rad(50)
-            bias_alpha = 0
+            # bias_alpha = 0
         
         cal_err = 0.000000001
         in_range = ((p2 - O).real >= -cal_err) & ((p1 - O).real <= cal_err)    # lowest point is between 2 endpoints

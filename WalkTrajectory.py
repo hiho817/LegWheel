@@ -19,7 +19,7 @@ BH = 0.2     # body height, 20 cm
 CoM_bias = 0.0    # x bias of center of mass
 velocity = 0.1     # velocity of hip, meter per second
 sampling = 1000    # sampling rate, how many commands to one motor per second.
-stand_height = 0.20
+stand_height = 0.25
 step_length = 0.3
 step_height = 0.04
 forward_distance = 3.0  # distance to walk
@@ -107,7 +107,8 @@ for i in range(4):
     theta_list[i].append(theta)
     beta_list[i].append(beta)
     hip_list[i].append(hip[i].copy())
-
+print(theta_list)
+print(beta_list)
 # Start walking
 while traveled_distance <= forward_distance:
     for i in range(4):
