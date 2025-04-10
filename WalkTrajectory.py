@@ -32,7 +32,7 @@ init_beta  = init_eta[[1,3,5,7]]
 init_beta[[0, 3]] *= -1
 
 #### Dependent parameters ####
-swing_time = 0.15    # duty: 0.8~1.0
+swing_time = 0.2    # duty: 0.8~1.0
 # Get foothold in hip coordinate from initial configuration
 relative_foothold = np.zeros((4, 2))
 for i in range(4):
