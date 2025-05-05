@@ -160,13 +160,13 @@ if __name__ == '__main__':
     
     plot_leg = PlotLeg()  # rad
     ax = plot_leg.plot_by_angle()
-    ax = plot_leg.plot_by_angle(np.deg2rad(130), np.deg2rad(-45), [0., 0.3], ax=ax)
-    ax = plot_leg.plot_by_rim([0.2, 0.0], [0.1, 0.3], rim='G', ax=ax)
-    ax = plot_leg.plot_by_rim([0.6, 0.1], [0.5, 0.2], rim='lower', ax=ax)
-    ax = plot_leg.plot_by_rim([0.3, 0.1], [0.4, 0.2], rim='lower', ax=ax)
-    plot_leg.setting(mark_size=10, line_width=3, color='red')
-    ax = plot_leg.plot_by_rim([0.8, 0.0], [0.9, 0.12], rim='upper', ax=ax)
-    ax = plot_leg.plot_by_rim([1.0, 0.0], [0.9, 0.12], rim='upper', ax=ax)
+    ax = plot_leg.plot_by_angle(np.deg2rad(130), np.deg2rad(0), [0., 0.3], ax=ax)
+    # ax = plot_leg.plot_by_rim([0.2, 0.0], [0.1, 0.3], rim='G', ax=ax)
+    # ax = plot_leg.plot_by_rim([0.6, 0.1], [0.5, 0.2], rim='lower', ax=ax)
+    # ax = plot_leg.plot_by_rim([0.3, 0.1], [0.4, 0.2], rim='lower', ax=ax)
+    # plot_leg.setting(mark_size=10, line_width=3, color='red')
+    # ax = plot_leg.plot_by_rim([0.8, 0.0], [0.9, 0.12], rim='upper', ax=ax)
+    # ax = plot_leg.plot_by_rim([1.0, 0.0], [0.9, 0.12], rim='upper', ax=ax)
     ax.grid()
     
     plt.savefig(file_name + '.png')
