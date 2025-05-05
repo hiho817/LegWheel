@@ -35,23 +35,30 @@ class ContactEstimator:
         G = np.vstack((np.zeros(8), G_y_coef))
 
         scaled_radius = self.leg_model.radius / self.leg_model.R
-        rot_alpha = np.array([[np.cos(alpha), -np.sin(alpha)],
-                              [np.sin(alpha),  np.cos(alpha)]])
 
         if rim == 1:
+            rot_alpha = self.rotate(alpha + np.pi)
             return rot_alpha @ (H_l - U_l) * scaled_radius + U_l
         elif rim == 2:
+            rot_alpha = self.rotate(alpha)
             return rot_alpha @ (G - L_l) * scaled_radius + L_l
         elif rim == 3:
+            rot_alpha = self.rotate(alpha)
+            print("rot_alpha:", rot_alpha)
             return rot_alpha @ (G - L_l) * self.leg_model.r / self.leg_model.R + G
         elif rim == 4:
+            rot_alpha = self.rotate(alpha)
             return rot_alpha @ (G - L_r) * scaled_radius + L_r
         elif rim == 5:
-            rot_alpha = np.array([[np.cos(alpha - np.pi), -np.sin(alpha - np.pi)],
-                                  [np.sin(alpha - np.pi),  np.cos(alpha - np.pi)]])
+            rot_alpha = self.rotate(alpha - np.pi)
             return rot_alpha @ (H_r - U_r) * scaled_radius + U_r
         else:
             return np.zeros((2, 8))
+    
+    def rotate(self, alpha):
+        rot_alpha = np.array([[np.cos(alpha), -np.sin(alpha)],
+                              [np.sin(alpha),  np.cos(alpha)]])
+        return rot_alpha
 
     def calculate_jacobian(self, P_theta, P_theta_deriv, beta):
         cos_b, sin_b = np.cos(beta), np.sin(beta)
@@ -60,8 +67,8 @@ class ContactEstimator:
 
         dPx_dtheta = P_theta_deriv[0] * cos_b - P_theta_deriv[1] * sin_b
         dPy_dtheta = P_theta_deriv[0] * sin_b + P_theta_deriv[1] * cos_b
-        dPx_dbeta = -P_theta[0] * sin_b - P_theta[1] * cos_b
-        dPy_dbeta = P_theta[0] * cos_b - P_theta[1] * sin_b
+        dPx_dbeta = P_theta[0] * (-sin_b) - P_theta[1] * cos_b
+        dPy_dbeta = P_theta[0] * cos_b + P_theta[1] * (-sin_b)
 
         J = np.array([
             [dPx_dtheta * dtheta_dphiR + dPx_dbeta * dbeta_dphiR,
@@ -139,24 +146,24 @@ if __name__ == '__main__':
     torque_l = 1.1205
 
     force = estimator.estimate_force(theta, beta, torque_r, torque_l)
-    
     print ("theta: %f degree" % np.rad2deg(theta))
     print ("beta: %f degree" % np.rad2deg(beta))
-    print("rim:", estimator.leg_model.rim)
-    print("alpha:", estimator.leg_model.alpha)
-    print("Estimated Force:", force)
+    print("rim:", leg_model.rim)
+    print("alpha:", leg_model.alpha)
+    print("Estimated Force X:", force[0])
+    print("Estimated Force Y:", force[1])
 
-    positions, forces = estimator.sample_force_and_positions(theta, beta, torque_r, torque_l)
-    # print("Sampled force shape:", forces.shape)  # (2, 101)
+    # positions, forces = estimator.sample_force_and_positions(theta, beta, torque_r, torque_l)
+    # # print("Sampled force shape:", forces.shape)  # (2, 101)
 
-    plot_leg = PlotLeg(sim=True)
-    fig, ax = plt.subplots(figsize=(6,6))
-    ax = plot_leg.plot_by_angle(theta, beta, O=[0,0], ax=ax)
+    # plot_leg = PlotLeg(sim=True)
+    # fig, ax = plt.subplots(figsize=(6,6))
+    # ax = plot_leg.plot_by_angle(theta, beta, O=[0,0], ax=ax)
 
-    # Plot force vectors at each sampled alpha point
-    for (x, y), (fx, fy) in zip(positions.T, forces.T):
-        ax.arrow(x, y, fx/1000, fy/1000, head_width=0.005, head_length=0.01, length_includes_head=True, color='r')
+    # # Plot force vectors at each sampled alpha point
+    # for (x, y), (fx, fy) in zip(positions.T, forces.T):
+    #     ax.arrow(x, y, fx/1000, fy/1000, head_width=0.005, head_length=0.01, length_includes_head=True, color='r')
 
-    ax.set_aspect('equal')
-    ax.grid(True)
-    plt.show()
+    # ax.set_aspect('equal')
+    # ax.grid(True)
+    # plt.show()
