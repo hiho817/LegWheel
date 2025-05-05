@@ -44,7 +44,6 @@ class ContactEstimator:
             return rot_alpha @ (G - L_l) * scaled_radius + L_l
         elif rim == 3:
             rot_alpha = self.rotate(alpha)
-            print("rot_alpha:", rot_alpha)
             return rot_alpha @ (G - L_l) * self.leg_model.r / self.leg_model.R + G
         elif rim == 4:
             rot_alpha = self.rotate(alpha)
@@ -95,8 +94,7 @@ class ContactEstimator:
 
             # compute position via P_poly @ [1, θ, θ^2,...]
             P_theta = P_poly.dot(phi)
-            rot_beta = np.array([[np.cos(beta), -np.sin(beta)],
-                                 [np.sin(beta),  np.cos(beta)]])
+            rot_beta = self.rotate(beta)
             pos_world = rot_beta.dot(P_theta)
             positions[:, i] = pos_world
 
@@ -145,25 +143,25 @@ if __name__ == '__main__':
     torque_r = -3.16241
     torque_l = 1.1205
 
-    force = estimator.estimate_force(theta, beta, torque_r, torque_l)
-    print ("theta: %f degree" % np.rad2deg(theta))
-    print ("beta: %f degree" % np.rad2deg(beta))
-    print("rim:", leg_model.rim)
-    print("alpha:", leg_model.alpha)
-    print("Estimated Force X:", force[0])
-    print("Estimated Force Y:", force[1])
+    # force = estimator.estimate_force(theta, beta, torque_r, torque_l)
+    # print ("theta: %f degree" % np.rad2deg(theta))
+    # print ("beta: %f degree" % np.rad2deg(beta))
+    # print("rim:", leg_model.rim)
+    # print("alpha:", leg_model.alpha)
+    # print("Estimated Force X:", force[0])
+    # print("Estimated Force Y:", force[1])
 
-    # positions, forces = estimator.sample_force_and_positions(theta, beta, torque_r, torque_l)
-    # # print("Sampled force shape:", forces.shape)  # (2, 101)
+    positions, forces = estimator.sample_force_and_positions(theta, beta, torque_r, torque_l)
+    # print("Sampled force shape:", forces.shape)  # (2, 101)
 
-    # plot_leg = PlotLeg(sim=True)
-    # fig, ax = plt.subplots(figsize=(6,6))
-    # ax = plot_leg.plot_by_angle(theta, beta, O=[0,0], ax=ax)
+    plot_leg = PlotLeg(sim=True)
+    fig, ax = plt.subplots(figsize=(6,6))
+    ax = plot_leg.plot_by_angle(theta, beta, O=[0,0], ax=ax)
 
-    # # Plot force vectors at each sampled alpha point
-    # for (x, y), (fx, fy) in zip(positions.T, forces.T):
-    #     ax.arrow(x, y, fx/1000, fy/1000, head_width=0.005, head_length=0.01, length_includes_head=True, color='r')
+    # Plot force vectors at each sampled alpha point
+    for (x, y), (fx, fy) in zip(positions.T, forces.T):
+        ax.arrow(x, y, fx/1000, fy/1000, head_width=0.005, head_length=0.01, length_includes_head=True, color='r')
 
-    # ax.set_aspect('equal')
-    # ax.grid(True)
-    # plt.show()
+    ax.set_aspect('equal')
+    ax.grid(True)
+    plt.show()
