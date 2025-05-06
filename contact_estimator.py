@@ -9,21 +9,42 @@ class ContactEstimator:
         self.leg_model = leg_model
         self.P_poly_table = {}
         self.P_poly_deriv_table = {}
-        self.build_lookup_tables()
+        self.build_lookup_tables(step_deg=3.0)
 
-    def build_lookup_tables(self):
-        for alpha_deg in range(-50, 51):  # from -50 to 50 inclusive
-            idx = alpha_deg
-            alpha_rad = np.deg2rad(alpha_deg)
-            rim = 2 if alpha_deg < 0 else (3 if alpha_deg == 0 else 4)
+    def build_lookup_tables(self, step_deg: float = 1.0):
+        self._step_deg = step_deg
+        self._scale    = 1.0 / step_deg
+        self.P_poly_table       = {2: {}, 3: {}, 4: {}}
+        self.P_poly_deriv_table = {2: {}, 3: {}, 4: {}}
 
-            P_poly = self.calculate_P_poly(rim, alpha_rad)
-            self.P_poly_table[idx] = P_poly
+        # 各 rim 的 α 範圍（左閉右閉）
+        rim_ranges = {
+            2: (-50.0,   -step_deg),
+            3: (  0.0, 180.0),
+            4: (  step_deg,  50.0),
+        }
 
-            P_poly_deriv = np.zeros((2, 7))
-            for k in range(7):
-                P_poly_deriv[:, k] = P_poly[:, k + 1] * (k + 1)
-            self.P_poly_deriv_table[idx] = P_poly_deriv
+        for rim, (alpha_min, alpha_max) in rim_ranges.items():
+            # np.arange(…+step_deg) 可確保包含上界
+            for alpha_deg in np.arange(alpha_min, alpha_max + step_deg, step_deg):
+                idx = int(round(alpha_deg * self._scale))
+                alpha_rad = np.deg2rad(alpha_deg)
+
+                P_poly = self.calculate_P_poly(rim, alpha_rad)
+                self.P_poly_table[rim][idx] = P_poly
+
+                # 一次算好導數
+                P_poly_deriv = P_poly[:, 1:] * np.arange(1, 8)   # shape (2,7)
+                self.P_poly_deriv_table[rim][idx] = P_poly_deriv
+    
+    def _idx(self, alpha_deg: float) -> int:
+        return int(round(alpha_deg / self._step_deg))
+    
+    def get_P_poly(self, rim: int, alpha_deg: float):
+        return self.P_poly_table[rim][self._idx(alpha_deg)]
+
+    def get_P_poly_deriv(self, rim: int, alpha_deg: float):
+        return self.P_poly_deriv_table[rim][self._idx(alpha_deg)]
 
     def calculate_P_poly(self, rim, alpha):
         H_l = np.vstack((H_x_coef, H_y_coef))
@@ -78,37 +99,60 @@ class ContactEstimator:
         return J
 
     def sample_force_and_positions(self, theta, beta, torque_r, torque_l):
-        tor = np.array([[torque_r], [torque_l]])
-        alphas = list(range(-50, 51))
-        n = len(alphas)
-        positions = np.zeros((2, n))
-        forces = np.zeros((2, n))
+        self.calculate_outside_point(theta, beta)
+        # ---------- 1) 先算 G_alpha ----------
+        G_alpha = max(0.0, min(self.calculate_G_alpha(), 180.0))
 
-        # prepare monomials
-        phi = np.array([theta**k for k in range(8)])
-        phi_deriv = np.array([theta**k for k in range(7)])
+        # ---------- 2) 準備 α 集合 ----------
+        step   = self._step_deg
+        scale  = self._scale  # = 1/step, 在 build_lookup_tables 時存起來
 
-        for i, alpha_deg in enumerate(alphas):
-            P_poly  = self.P_poly_table[alpha_deg]
-            P_deriv = self.P_poly_deriv_table[alpha_deg]
+        alpha_tasks = []  # list[(rim, α_deg)]
+        
+        # rim 2: [-50, 0]
+        for alpha in np.arange(-50.0, 0.0, step):
+            alpha_tasks.append((2, alpha))
+        # rim 3: [0, G_alpha]
+        for alpha in np.arange(0.0,  G_alpha + step, step):
+            alpha_tasks.append((3, alpha))
+        # rim 4: [0, 50]
+        for alpha in np.arange(step,  50.0 + step, step):
+            alpha_tasks.append((4, alpha))
 
-            # compute position via P_poly @ [1, θ, θ^2,...]
-            P_theta = P_poly.dot(phi)
-            rot_beta = self.rotate(beta)
-            pos_world = rot_beta.dot(P_theta)
+        n_pts = len(alpha_tasks)
+        positions = np.zeros((2, n_pts))
+        forces    = np.zeros((2, n_pts))
+
+        # ---------- 3) 事先把 θ 多項式 & 導數算好 ----------
+        phi       = np.array([theta ** k for k in range(8)])   # 0~7 次
+        phi_deriv = np.array([theta ** k for k in range(7)])   # 0~6 次
+        tor       = np.array([[torque_r], [torque_l]])
+        rot_beta  = self.rotate(beta)
+
+        # ---------- 4) 逐點處理 ----------
+        for i, (rim, alpha_deg) in enumerate(alpha_tasks):
+            idx = int(round(alpha_deg * scale))        # == self._idx(α_deg)
+
+            P_poly  = self.P_poly_table[rim][idx]
+            P_deriv = self.P_poly_deriv_table[rim][idx]
+
+            # --- 位置 ---
+            P_theta  = P_poly @ phi            # shape (2,)
+            pos_world = rot_beta @ P_theta
             positions[:, i] = pos_world
 
-            # derivative
-            P_theta_deriv = P_deriv.dot(phi_deriv)
+            # --- 力 ---
+            P_theta_d = P_deriv @ phi_deriv    # shape (2,)
+            J         = self.calculate_jacobian(P_theta, P_theta_d, beta)
 
-            J = self.calculate_jacobian(P_theta, P_theta_deriv, beta)
-            if np.linalg.norm(J) < 1e-6:
-                forces[:, i] = 0
+            if np.linalg.cond(J) > 1e12:   # 奇異或接近奇異
+                forces[:, i] = 0.0
             else:
-                f = np.linalg.inv(J.T).dot(tor).flatten()
-                forces[:, i] = f
+                f = np.linalg.inv(J.T) @ tor
+                forces[:, i] = f.flatten()
 
         return positions, forces
+
     
     def estimate_force(self, theta, beta, torque_r, torque_l):
         self.leg_model.contact_map(theta, beta)
@@ -130,8 +174,35 @@ class ContactEstimator:
             torque = np.array([[torque_r], [torque_l]])
             force_est = np.linalg.inv(jacobian.T) @ torque
             return force_est
+        
+    def calculate_G_alpha(self):
+        # points on the outside of the wheel
+        start = self.leg_model.G - self.LG_r
+        end = self.leg_model.G - self.LG_l
+        angle = np.angle(start) - np.angle(end)
+        angle = np.rad2deg(angle)
+        return angle
+    
+    def calculate_outside_point(self,theta, beta):
+        self.leg_model.forward(theta, beta, vector=False)
+        self.LG_l = (self.leg_model.G - self.leg_model.L_l)   / self.leg_model.R * self.leg_model.radius + self.leg_model.L_l   # L_l -> G -> rim point
+        self.LG_r = (self.leg_model.G - self.leg_model.L_r)   / self.leg_model.R * self.leg_model.radius + self.leg_model.L_r   # L_r -> G -> rim point
+        self.UH_l = (self.leg_model.H_l - self.leg_model.U_l) / self.leg_model.R * self.leg_model.radius + self.leg_model.U_l   # U_l -> H_l -> rim point
+        self.UH_r = (self.leg_model.H_r - self.leg_model.U_r) / self.leg_model.R * self.leg_model.radius + self.leg_model.U_r   # U_r -> H_r -> rim point
+        self.LF_l = (self.leg_model.F_l - self.leg_model.L_l) / self.leg_model.R * self.leg_model.radius + self.leg_model.L_l   # L_l -> F_l -> rim point
+        self.LF_r = (self.leg_model.F_r - self.leg_model.L_r) / self.leg_model.R * self.leg_model.radius + self.leg_model.L_r   # L_r -> F_r -> rim point
+        self.UF_l = (self.leg_model.F_l - self.leg_model.U_l) / self.leg_model.R * self.leg_model.radius + self.leg_model.U_l   # U_l -> F_l -> rim point
+        self.UF_r = (self.leg_model.F_r - self.leg_model.U_r) / self.leg_model.R * self.leg_model.radius + self.leg_model.U_r   # U_r -> F_r -> rim point
 
-
+def plot_complex_numbers(complex_number, ax=None, label=None):
+    if ax is None:
+        fig, ax = plt.subplots()
+    marker_styles = ['o', 's', 'D', '^', 'v', '<', '>', 'p', '*', 'h', 'H', '+', 'x', '|', '_']
+    marker = np.random.choice(marker_styles)
+    ax.plot(complex_number.real, complex_number.imag, marker=marker, label=label)
+    if label:
+        ax.legend()
+    ax.set_aspect('equal')
 
 if __name__ == '__main__':
     leg_model = LegModel(sim=True)
@@ -139,10 +210,14 @@ if __name__ == '__main__':
 
     theta = 1.93618
     beta = 0.497584
-
     torque_r = -3.16241
     torque_l = 1.1205
 
+    # theta = 0.0
+    # beta = 0.0
+    # torque_r = 0.0
+    # torque_l = 0.0
+    
     # force = estimator.estimate_force(theta, beta, torque_r, torque_l)
     # print ("theta: %f degree" % np.rad2deg(theta))
     # print ("beta: %f degree" % np.rad2deg(beta))
@@ -158,10 +233,16 @@ if __name__ == '__main__':
     fig, ax = plt.subplots(figsize=(6,6))
     ax = plot_leg.plot_by_angle(theta, beta, O=[0,0], ax=ax)
 
-    # Plot force vectors at each sampled alpha point
+    # # Plot force vectors at each sampled alpha point
     for (x, y), (fx, fy) in zip(positions.T, forces.T):
-        ax.arrow(x, y, fx/1000, fy/1000, head_width=0.005, head_length=0.01, length_includes_head=True, color='r')
+        ax.arrow(x, y, (-fx)/1000, (-fy + 0.68*9.81)/1000, head_width=0.005, head_length=0.01, length_includes_head=True, color='r')
+    #                                 #wheel weight = 0.68*9.81
+                            
+    # Draw the point LG_l
+    plot_complex_numbers(estimator.LG_l, ax = ax, label='LG_l')
+    plot_complex_numbers(estimator.LF_l, ax = ax, label='LF_l')
+    plot_complex_numbers(estimator.UF_l, ax = ax, label='UF_l')
 
-    ax.set_aspect('equal')
+
     ax.grid(True)
     plt.show()
