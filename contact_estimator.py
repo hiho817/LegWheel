@@ -58,27 +58,22 @@ class ContactEstimator:
         scaled_radius = self.leg_model.radius / self.leg_model.R
 
         if rim == 1:
-            rot_alpha = self.rotate(alpha + np.pi)
+            rot_alpha = rotate(alpha + np.pi)
             return rot_alpha @ (H_l - U_l) * scaled_radius + U_l
         elif rim == 2:
-            rot_alpha = self.rotate(alpha)
+            rot_alpha = rotate(alpha)
             return rot_alpha @ (G - L_l) * scaled_radius + L_l
         elif rim == 3:
-            rot_alpha = self.rotate(alpha)
+            rot_alpha = rotate(alpha)
             return rot_alpha @ (G - L_l) * self.leg_model.r / self.leg_model.R + G
         elif rim == 4:
-            rot_alpha = self.rotate(alpha)
+            rot_alpha = rotate(alpha)
             return rot_alpha @ (G - L_r) * scaled_radius + L_r
         elif rim == 5:
-            rot_alpha = self.rotate(alpha - np.pi)
+            rot_alpha = rotate(alpha - np.pi)
             return rot_alpha @ (H_r - U_r) * scaled_radius + U_r
         else:
             return np.zeros((2, 8))
-    
-    def rotate(self, alpha):
-        rot_alpha = np.array([[np.cos(alpha), -np.sin(alpha)],
-                              [np.sin(alpha),  np.cos(alpha)]])
-        return rot_alpha
 
     def calculate_jacobian(self, P_theta, P_theta_deriv, beta):
         cos_b, sin_b = np.cos(beta), np.sin(beta)
@@ -99,13 +94,13 @@ class ContactEstimator:
         return J
 
     def sample_force_and_positions(self, theta, beta, torque_r, torque_l):
-        self.calculate_outside_point(theta, beta)
-        # ---------- 1) 先算 G_alpha ----------
-        G_alpha = max(0.0, min(self.calculate_G_alpha(), 180.0))
 
-        # ---------- 2) 準備 α 集合 ----------
+        self.calculate_outside_point(theta, beta)
+        G_alpha = max(0.0, min(self.get_G_alpha_interval(), 180.0))
+        # alpha_bias = int(self.get_L_rim_alpha_interval())
+
         step   = self._step_deg
-        scale  = self._scale  # = 1/step, 在 build_lookup_tables 時存起來
+        scale  = self._scale  # = 1/step
 
         alpha_tasks = []  # list[(rim, α_deg)]
         
@@ -113,7 +108,7 @@ class ContactEstimator:
         for alpha in np.arange(-50.0, 0.0, step):
             alpha_tasks.append((2, alpha))
         # rim 3: [0, G_alpha]
-        for alpha in np.arange(0.0,  G_alpha + step, step):
+        for alpha in np.arange(0.0,  G_alpha + step, step * 10):
             alpha_tasks.append((3, alpha))
         # rim 4: [0, 50]
         for alpha in np.arange(step,  50.0 + step, step):
@@ -127,7 +122,7 @@ class ContactEstimator:
         phi       = np.array([theta ** k for k in range(8)])   # 0~7 次
         phi_deriv = np.array([theta ** k for k in range(7)])   # 0~6 次
         tor       = np.array([[torque_r], [torque_l]])
-        rot_beta  = self.rotate(beta)
+        rot_beta  = rotate(beta)
 
         # ---------- 4) 逐點處理 ----------
         for i, (rim, alpha_deg) in enumerate(alpha_tasks):
@@ -175,13 +170,30 @@ class ContactEstimator:
             force_est = np.linalg.inv(jacobian.T) @ torque
             return force_est
         
-    def calculate_G_alpha(self):
-        # points on the outside of the wheel
-        start = self.leg_model.G - self.LG_r
-        end = self.leg_model.G - self.LG_l
-        angle = np.angle(start) - np.angle(end)
+    def get_G_alpha_interval(self):
+        z1 = self.LG_r - self.leg_model.G
+        z2 = self.LG_l - self.leg_model.G
+        angle = np.angle(z1 / z2)
         angle = np.rad2deg(angle)
         return angle
+    
+    # def get_L_rim_alpha_interval(self):
+    #     z1 = self.leg_model.U_l - self.leg_model.L_l
+    #     z2 = self.leg_model.F_l - self.leg_model.L_l
+    #     angle_1 = abs(np.angle(z1 / z2))
+    #     print("angle_1:", angle_1)
+
+    #     a = abs(z1)
+    #     b = abs(self.LF_l - self.leg_model.L_l)
+    #     c = abs(self.UF_l - self.leg_model.U_l)
+    #     print("a:", a)
+    #     angle_2 = np.angle(np.arccos((a**2 + b**2 - c**2) / (2 * a * b)))
+    #     print("angle_2:", angle_2)
+    #     angle = abs(angle_1 - angle_2)
+        
+    #     print("L_rim_alpha_interval:", angle)
+    #     return angle
+
     
     def calculate_outside_point(self,theta, beta):
         self.leg_model.forward(theta, beta, vector=False)
@@ -194,7 +206,13 @@ class ContactEstimator:
         self.UF_l = (self.leg_model.F_l - self.leg_model.U_l) / self.leg_model.R * self.leg_model.radius + self.leg_model.U_l   # U_l -> F_l -> rim point
         self.UF_r = (self.leg_model.F_r - self.leg_model.U_r) / self.leg_model.R * self.leg_model.radius + self.leg_model.U_r   # U_r -> F_r -> rim point
 
-def plot_complex_numbers(complex_number, ax=None, label=None):
+def rotate(alpha):
+    rot_alpha = np.array([[np.cos(alpha), -np.sin(alpha)],
+                            [np.sin(alpha),  np.cos(alpha)]])
+    return rot_alpha
+
+
+def plot_complex_point(complex_number, ax=None, label=None):
     if ax is None:
         fig, ax = plt.subplots()
     marker_styles = ['o', 's', 'D', '^', 'v', '<', '>', 'p', '*', 'h', 'H', '+', 'x', '|', '_']
@@ -213,7 +231,7 @@ if __name__ == '__main__':
     torque_r = -3.16241
     torque_l = 1.1205
 
-    # theta = 0.0
+    # theta = np.deg2rad(30.0)
     # beta = 0.0
     # torque_r = 0.0
     # torque_l = 0.0
@@ -231,17 +249,18 @@ if __name__ == '__main__':
 
     plot_leg = PlotLeg(sim=True)
     fig, ax = plt.subplots(figsize=(6,6))
-    ax = plot_leg.plot_by_angle(theta, beta, O=[0,0], ax=ax)
+    # ax = plot_leg.plot_by_angle(theta, beta, O=[0,0], ax=ax)
 
     # # Plot force vectors at each sampled alpha point
-    for (x, y), (fx, fy) in zip(positions.T, forces.T):
-        ax.arrow(x, y, (-fx)/1000, (-fy + 0.68*9.81)/1000, head_width=0.005, head_length=0.01, length_includes_head=True, color='r')
-    #                                 #wheel weight = 0.68*9.81
+    # for (x, y), (fx, fy) in zip(positions.T, forces.T):
+    #     ax.arrow(x, y, (-fx)/1000, (-fy + 0.68*9.81)/1000, head_width=0.005, head_length=0.01, length_includes_head=True, color='r')
+    # #                                 #wheel weight = 0.68*9.81
                             
-    # Draw the point LG_l
-    plot_complex_numbers(estimator.LG_l, ax = ax, label='LG_l')
-    plot_complex_numbers(estimator.LF_l, ax = ax, label='LF_l')
-    plot_complex_numbers(estimator.UF_l, ax = ax, label='UF_l')
+    # # Draw the points
+    # plot_complex_point(estimator.LG_l, ax = ax, label='LG_l')
+    # plot_complex_point(estimator.LF_l, ax = ax, label='LF_l')
+    # plot_complex_point(estimator.UF_l, ax = ax, label='UF_l')
+    # plot_complex_point(estimator.leg_model.L_l, ax = ax, label='L_l')
 
 
     ax.grid(True)
