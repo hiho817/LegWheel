@@ -90,10 +90,8 @@ class ContactEstimator:
         dPy_dbeta = P_theta[0] * cos_b + P_theta[1] * (-sin_b)
 
         J = np.array([
-            [dPx_dtheta * dtheta_dphiR + dPx_dbeta * dbeta_dphiR,
-             dPx_dtheta * dtheta_dphiL + dPx_dbeta * dbeta_dphiL],
-            [dPy_dtheta * dtheta_dphiR + dPy_dbeta * dbeta_dphiR,
-             dPy_dtheta * dtheta_dphiL + dPy_dbeta * dbeta_dphiL]
+            [dPx_dtheta * dtheta_dphiL + dPx_dbeta * dbeta_dphiR, dPx_dtheta * dtheta_dphiR + dPx_dbeta * dbeta_dphiR],
+            [dPy_dtheta * dtheta_dphiL + dPy_dbeta * dbeta_dphiL, dPy_dtheta * dtheta_dphiR + dPy_dbeta * dbeta_dphiR]
         ])
         return J
     
@@ -173,10 +171,10 @@ class ContactEstimator:
                 J = self.calculate_jacobian(P_theta, P_theta_d, self.beta)
                 
                 # 儲存四個 Jacobian 元素
-                all_jacobian_elements[0, i] = J[0, 0]  # dPx/dphiR
-                all_jacobian_elements[1, i] = J[0, 1]  # dPx/dphiL
-                all_jacobian_elements[2, i] = J[1, 0]  # dPy/dphiR
-                all_jacobian_elements[3, i] = J[1, 1]  # dPy/dphiL
+                all_jacobian_elements[0, i] = J[0, 0]  # dPx/dphiL
+                all_jacobian_elements[1, i] = J[0, 1]  # dPx/dphiR
+                all_jacobian_elements[2, i] = J[1, 0]  # dPy/dphiL
+                all_jacobian_elements[3, i] = J[1, 1]  # dPy/dphiR
                 
             except (KeyError, IndexError, ValueError) as e:
                 # 如果出錯，設為 NaN
@@ -197,8 +195,8 @@ class ContactEstimator:
         fig, axes = plt.subplots(2, 2, figsize=(12, 10))
         fig.suptitle(f'Jacobian Elements vs Alpha\n(θ={np.rad2deg(self.theta):.1f}°, β={np.rad2deg(self.beta):.1f}°)')
         
-        element_names = ['J[0,0] (dPx/dφR)', 'J[0,1] (dPx/dφL)', 
-                        'J[1,0] (dPy/dφR)', 'J[1,1] (dPy/dφL)']
+        element_names = ['J[0,0] (dPx/dφL)', 'J[0,1] (dPx/dφR)', 
+                        'J[1,0] (dPy/dφL)', 'J[1,1] (dPy/dφR)']
         
         # 為不同 rim 段用不同顏色
         rim_colors = {
@@ -230,9 +228,64 @@ class ContactEstimator:
             ax.legend()
         
         plt.tight_layout()
-        plt.show()
         
         return alpha_values, jacobian_elements
+
+    def plot_jacobian_ratios_vs_alpha(self):
+        """
+        繪製 Jacobian 元素比值隨 alpha 的變化圖
+        1. J[0,0]/J[0,1] (dPx/dφL / dPx/dφR) vs alpha
+        2. J[1,0]/J[1,1] (dPy/dφL / dPy/dφR) vs alpha
+        """
+        alpha_values, jacobian_elements, rim_labels = self.analyze_jacobian_vs_alpha()
+        
+        fig, axes = plt.subplots(1, 2, figsize=(15, 6))
+        fig.suptitle(f'Jacobian Element Ratios vs Alpha\n(θ={np.rad2deg(self.theta):.1f}°, β={np.rad2deg(self.beta):.1f}°)')
+        
+        # 計算比值
+        ratio_x = jacobian_elements[0] / jacobian_elements[1]  # J[0,0]/J[0,1]
+        ratio_y = jacobian_elements[2] / jacobian_elements[3]  # J[1,0]/J[1,1]
+        
+        ratios = [ratio_x, ratio_y]
+        ratio_names = ['J[0,0]/J[0,1] (dPx/dφL / dPx/dφR)', 
+                      'J[1,0]/J[1,1] (dPy/dφL / dPy/dφR)']
+        
+        # 為不同 rim 段用不同顏色
+        rim_colors = {
+            '1': 'orange',
+            '2': 'red',
+            '3': 'blue', 
+            '4': 'green',
+            '5': 'purple'
+        }
+        
+        for i, (ax, ratio_data, name) in enumerate(zip(axes, ratios, ratio_names)):
+            # 為每個 rim 段繪製不同顏色的線
+            for rim_label, color in rim_colors.items():
+                mask = rim_labels == rim_label
+                if np.any(mask):
+                    alpha_subset = alpha_values[mask]
+                    ratio_subset = ratio_data[mask]
+                    
+                    # 移除 NaN 和 inf 值
+                    valid_mask = np.isfinite(ratio_subset)
+                    if np.any(valid_mask):
+                        ax.plot(alpha_subset[valid_mask], ratio_subset[valid_mask], 
+                               color=color, linewidth=1.5, label=f'Rim {rim_label}', marker='.')
+            
+            ax.set_xlabel('Alpha (degrees)')
+            ax.set_ylabel('Jacobian Ratio')
+            ax.set_title(name)
+            ax.grid(True, alpha=0.3)
+            ax.legend()
+            
+            # 添加水平線 y=0 作為參考
+            ax.axhline(y=0, color='black', linestyle='--', alpha=0.5)
+        
+        plt.tight_layout()
+        plt.show()
+        
+        return alpha_values, ratios
 
 def rotate(alpha):
     rot_alpha = np.array([[np.cos(alpha), -np.sin(alpha)],
@@ -242,8 +295,8 @@ def rotate(alpha):
 if __name__ == '__main__':
     leg_model = LegModel(sim=True)
 
-    theta = np.deg2rad(50.0)
-    beta = 0.0
+    theta = np.deg2rad(70.0)
+    beta  = np.deg2rad(.0)
     
     estimator = ContactEstimator(leg_model, theta, beta)
 
@@ -255,3 +308,6 @@ if __name__ == '__main__':
     
     # 繪製結果
     estimator.plot_jacobian_vs_alpha()
+    
+    # 繪製比值圖
+    estimator.plot_jacobian_ratios_vs_alpha()
