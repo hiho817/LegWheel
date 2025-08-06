@@ -16,14 +16,16 @@ class ContactEstimator:
     def build_lookup_tables(self, step_deg: float = 1.0):
         self._step_deg = step_deg
         self._scale    = 1.0 / step_deg
-        self.P_poly_table       = {2: {}, 3: {}, 4: {}}
-        self.P_poly_deriv_table = {2: {}, 3: {}, 4: {}}
+        self.P_poly_table       = {1: {}, 2: {}, 3: {}, 4: {}, 5: {}}
+        self.P_poly_deriv_table = {1: {}, 2: {}, 3: {}, 4: {}, 5: {}}
 
         # 各 rim 的 α 範圍（左閉右閉）
         rim_ranges = {
+            1: (-180.0, -50.0),
             2: (-50.0,   -step_deg),
             3: (  0.0, 180.0),
             4: (  step_deg,  50.0),
+            5: (50.0 + step_deg, 180.0),
         }
 
         for rim, (alpha_min, alpha_max) in rim_ranges.items():
@@ -118,12 +120,12 @@ class ContactEstimator:
         分析在固定 theta, beta 下,Jacobian 四個元素隨 alpha 的變化
         包含所有 5 個 rim 段
         """
+        self.calculate_outside_point()
         G_alpha = max(0.0, min(self.get_G_alpha_interval(), 180.0))
 
         alpha_tasks = []  # list[(rim, α_deg)]
 
         step = self._step_deg
-        scale = 1.0 / step
 
         # rim 1: [-180, -50]
         for alpha in np.arange(-180.0, -50.0 + step, step):
@@ -132,7 +134,7 @@ class ContactEstimator:
         for alpha in np.arange(-50.0, 0.0, step):
             alpha_tasks.append((2, alpha))
         # rim 3: [0, G_alpha]
-        for alpha in np.arange(0.0,  G_alpha + step, step * 10):
+        for alpha in np.arange(0.0,  G_alpha + step, step):
             alpha_tasks.append((3, alpha))
         # rim 4: [0, 50]
         for alpha in np.arange(step,  50.0 + step, step):
@@ -142,31 +144,58 @@ class ContactEstimator:
             alpha_tasks.append((5, alpha))
         
         n_pts = len(alpha_tasks)
+        
+        # 儲存結果
+        all_alpha_values = []
+        all_jacobian_elements = np.zeros((4, n_pts))  # J[0,0], J[0,1], J[1,0], J[1,1]
+        all_rim_labels = []
 
-        phi       = np.array([theta ** k for k in range(8)])   # 0~7 次
-        phi_deriv = np.array([theta ** k for k in range(7)])   # 0~6 次
-        rot_beta  = rotate(beta)
+        phi = np.array([self.theta ** k for k in range(8)])   # 0~7 次
+        phi_deriv = np.array([self.theta ** k for k in range(7)])   # 0~6 次
 
         for i, (rim, alpha_deg) in enumerate(alpha_tasks):
-            idx = int(round(alpha_deg * scale))        # == self._idx(α_deg)
+            try:
+                idx = self._idx(alpha_deg)
+                
+                # 檢查查找表中是否有對應值
+                if rim in self.P_poly_table and idx in self.P_poly_table[rim]:
+                    P_poly = self.P_poly_table[rim][idx]
+                    P_deriv = self.P_poly_deriv_table[rim][idx]
+                else:
+                    # 直接計算
+                    alpha_rad = np.deg2rad(alpha_deg)
+                    P_poly = self.calculate_P_poly(rim, alpha_rad)
+                    P_deriv = P_poly[:, 1:] * np.arange(1, 8)
 
-            P_poly  = self.P_poly_table[rim][idx]
-            P_deriv = self.P_poly_deriv_table[rim][idx]
+                P_theta = P_poly @ phi 
+                P_theta_d = P_deriv @ phi_deriv
 
-            P_theta  = P_poly @ phi 
-            P_theta_d = P_deriv @ phi_deriv
-
-            J = self.calculate_jacobian(P_theta, P_theta_d, beta)
+                J = self.calculate_jacobian(P_theta, P_theta_d, self.beta)
+                
+                # 儲存四個 Jacobian 元素
+                all_jacobian_elements[0, i] = J[0, 0]  # dPx/dphiR
+                all_jacobian_elements[1, i] = J[0, 1]  # dPx/dphiL
+                all_jacobian_elements[2, i] = J[1, 0]  # dPy/dphiR
+                all_jacobian_elements[3, i] = J[1, 1]  # dPy/dphiL
+                
+            except (KeyError, IndexError, ValueError) as e:
+                # 如果出錯，設為 NaN
+                all_jacobian_elements[:, i] = np.nan
+                print(f"Error at rim {rim}, alpha {alpha_deg}: {e}")
+            
+            all_alpha_values.append(alpha_deg)
+            all_rim_labels.append(str(rim))
+        
+        return np.array(all_alpha_values), all_jacobian_elements, np.array(all_rim_labels)
     
-    
-    def plot_jacobian_vs_alpha(self, theta, beta):
+    def plot_jacobian_vs_alpha(self):
         """
         繪製 Jacobian 四個元素隨 alpha 的變化圖
         """
         alpha_values, jacobian_elements, rim_labels = self.analyze_jacobian_vs_alpha()
         
         fig, axes = plt.subplots(2, 2, figsize=(12, 10))
-        fig.suptitle(f'Jacobian Elements vs Alpha\n(θ={np.rad2deg(theta):.1f}°, β={np.rad2deg(beta):.1f}°)')
+        fig.suptitle(f'Jacobian Elements vs Alpha\n(θ={np.rad2deg(self.theta):.1f}°, β={np.rad2deg(self.beta):.1f}°)')
         
         element_names = ['J[0,0] (dPx/dφR)', 'J[0,1] (dPx/dφL)', 
                         'J[1,0] (dPy/dφR)', 'J[1,1] (dPy/dφL)']
@@ -213,7 +242,7 @@ def rotate(alpha):
 if __name__ == '__main__':
     leg_model = LegModel(sim=True)
 
-    theta = np.deg2rad(17.0)
+    theta = np.deg2rad(50.0)
     beta = 0.0
     
     estimator = ContactEstimator(leg_model, theta, beta)
@@ -222,7 +251,7 @@ if __name__ == '__main__':
     ax = plot_leg.plot_by_angle(theta, beta, O=[0,0])
     
     # 分析 Jacobian 隨 alpha 的變化
-    alpha_values, jacobian_elements, rim_labels = estimator.analyze_jacobian_vs_alpha(theta, beta)
+    alpha_values, jacobian_elements, rim_labels = estimator.analyze_jacobian_vs_alpha()
     
     # 繪製結果
-    estimator.plot_jacobian_vs_alpha(theta, beta)
+    estimator.plot_jacobian_vs_alpha()
