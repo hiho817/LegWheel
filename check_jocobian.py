@@ -243,12 +243,16 @@ class ContactEstimator:
         fig.suptitle(f'Jacobian Element Ratios vs Alpha\n(θ={np.rad2deg(self.theta):.1f}°, β={np.rad2deg(self.beta):.1f}°)')
         
         # 計算比值
-        ratio_x = jacobian_elements[0] / jacobian_elements[1]  # J[0,0]/J[0,1]
-        ratio_y = jacobian_elements[2] / jacobian_elements[3]  # J[1,0]/J[1,1]
+        ratio_x = np.abs(jacobian_elements[3]) / np.abs(jacobian_elements[2])  # J[1,1]/J[1,0]
+        ratio_y = np.abs(jacobian_elements[1]) / np.abs(jacobian_elements[0]) # J[0,1]/J[0,0]
+
+        # 確保比值不為零，避免除以零的情況
+        ratio_x[np.isinf(ratio_x)] = np.nan
+        ratio_y[np.isinf(ratio_y)] = np.nan
         
         ratios = [ratio_x, ratio_y]
-        ratio_names = ['J[0,0]/J[0,1] (dPx/dφL / dPx/dφR)', 
-                      'J[1,0]/J[1,1] (dPy/dφL / dPy/dφR)']
+        ratio_names = ['J[1,1]/J[1,0] FX ', 
+                       'J[0,1]/J[0,0] FY']
         
         # 為不同 rim 段用不同顏色
         rim_colors = {
@@ -275,13 +279,13 @@ class ContactEstimator:
             
             ax.set_xlabel('Alpha (degrees)')
             ax.set_ylabel('Jacobian Ratio')
+            ax.set_ylim(-0.25, 20)  # 設定 y 軸範圍以便更好地觀察
             ax.set_title(name)
             ax.grid(True, alpha=0.3)
             ax.legend()
             
             # 添加水平線 y=0 作為參考
-            ax.axhline(y=0, color='black', linestyle='--', alpha=0.5)
-        
+            ax.axhline(y=1, color='black', linestyle='--', alpha=0.5)
         plt.tight_layout()
         plt.show()
         
@@ -296,7 +300,7 @@ if __name__ == '__main__':
     leg_model = LegModel(sim=True)
 
     theta = np.deg2rad(70.0)
-    beta  = np.deg2rad(.0)
+    beta  = np.deg2rad(0.0)
     
     estimator = ContactEstimator(leg_model, theta, beta)
 
