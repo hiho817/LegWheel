@@ -9,19 +9,21 @@ class ContactEstimator:
         self.leg_model = leg_model
         self.P_poly_table = {}
         self.P_poly_deriv_table = {}
-        self.build_lookup_tables(step_deg=3.0)
+        self.build_lookup_tables(step_deg=20.0)  # 預設每 10 度取一點
 
     def build_lookup_tables(self, step_deg: float = 1.0):
         self._step_deg = step_deg
         self._scale    = 1.0 / step_deg
-        self.P_poly_table       = {2: {}, 3: {}, 4: {}}
-        self.P_poly_deriv_table = {2: {}, 3: {}, 4: {}}
+        self.P_poly_table       = {1: {}, 2: {}, 3: {}, 4: {}, 5: {}}
+        self.P_poly_deriv_table = {1: {}, 2: {}, 3: {}, 4: {}, 5: {}}
 
         # 各 rim 的 α 範圍（左閉右閉）
         rim_ranges = {
+            1: (-140.0, -50.0),
             2: (-50.0,   -step_deg),
             3: (  0.0, 180.0),
             4: (  step_deg,  50.0),
+            5: ( 50.0, 140.0),
         }
 
         for rim, (alpha_min, alpha_max) in rim_ranges.items():
@@ -103,16 +105,22 @@ class ContactEstimator:
         scale  = self._scale  # = 1/step
 
         alpha_tasks = []  # list[(rim, α_deg)]
-        
+
+        # rim 1: [-180, -50]
+        for alpha in np.arange(-140.0, -50.0 + step, step):
+            alpha_tasks.append((1, alpha))
         # rim 2: [-50, 0]
         for alpha in np.arange(-50.0, 0.0, step):
             alpha_tasks.append((2, alpha))
         # rim 3: [0, G_alpha]
-        for alpha in np.arange(0.0,  G_alpha + step, step * 10):
+        for alpha in np.arange(0.0,  G_alpha + step,step * (  self.leg_model.R / self.leg_model.r )):
             alpha_tasks.append((3, alpha))
         # rim 4: [0, 50]
         for alpha in np.arange(step,  50.0 + step, step):
             alpha_tasks.append((4, alpha))
+        # rim 5: [50, 180]
+        for alpha in np.arange(50.0, 140.0 + step, step):
+            alpha_tasks.append((5, alpha))
 
         n_pts = len(alpha_tasks)
         positions = np.zeros((2, n_pts))
@@ -226,12 +234,12 @@ if __name__ == '__main__':
     leg_model = LegModel(sim=True)
     estimator = ContactEstimator(leg_model)
 
-    theta = 1.93618
+    # theta = 1.93618
     beta = 0.497584
     torque_r = -3.16241
     torque_l = 1.1205
 
-    # theta = np.deg2rad(30.0)
+    theta = np.deg2rad(70.0)
     # beta = 0.0
     # torque_r = 0.0
     # torque_l = 0.0
@@ -249,12 +257,12 @@ if __name__ == '__main__':
 
     plot_leg = PlotLeg(sim=True)
     fig, ax = plt.subplots(figsize=(6,6))
-    # ax = plot_leg.plot_by_angle(theta, beta, O=[0,0], ax=ax)
+    ax = plot_leg.plot_by_angle(theta, beta, O=[0,0], ax=ax)
 
-    # # Plot force vectors at each sampled alpha point
-    # for (x, y), (fx, fy) in zip(positions.T, forces.T):
-    #     ax.arrow(x, y, (-fx)/1000, (-fy + 0.68*9.81)/1000, head_width=0.005, head_length=0.01, length_includes_head=True, color='r')
-    # #                                 #wheel weight = 0.68*9.81
+    # Plot force vectors at each sampled alpha point
+    for (x, y), (fx, fy) in zip(positions.T, forces.T):
+        ax.arrow(x, y, (-fx)/1000, (-fy)/1000, head_width=0.005, head_length=0.01, length_includes_head=True, color='r')
+    #                                 #wheel weight = 0.68*9.81
                             
     # # Draw the points
     # plot_complex_point(estimator.LG_l, ax = ax, label='LG_l')
