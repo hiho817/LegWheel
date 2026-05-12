@@ -20,9 +20,9 @@ CoM_bias = 0.0    # x bias of center of mass
 velocity = 0.1     # velocity of hip, meter per second
 sampling = 1000    # sampling rate, how many commands to one motor per second.
 stand_height = 0.25
-step_length = 0.3
-step_height = 0.04
-forward_distance = 3.0  # distance to walk
+step_length = 0.2
+step_height = 0.06
+forward_distance = 2.0  # distance to walk
 
 # Use self-defined initial configuration
 use_init_conf = False
@@ -194,4 +194,4 @@ if animate:
             ax = plot_leg.plot_leg(theta_list[i, frame*divide], beta_list[i, frame*divide], hip_list[i, frame*divide, :], ax)
 
     ani = FuncAnimation(fig, plot_update, frames=number_command//divide)
-    ani.save(output_file_name + ".mp4", fps=fps)
+    ani.save(output_file_name + ".gif", fps=fps)
