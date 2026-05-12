@@ -19,9 +19,9 @@ BH = 0.2     # body height, 20 cm
 CoM_bias = 0.0    # x bias of center of mass
 velocity = 0.1     # velocity of hip, meter per second
 sampling = 1000    # sampling rate, how many commands to one motor per second.
-stand_height = 0.25
+stand_height = 0.20
 step_length = 0.2
-step_height = 0.06
+step_height = 0.08
 forward_distance = 2.0  # distance to walk
 
 # Use self-defined initial configuration
