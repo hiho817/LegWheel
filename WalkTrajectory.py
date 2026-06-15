@@ -22,7 +22,7 @@ sampling = 1000    # sampling rate, how many commands to one motor per second.
 stand_height = 0.20
 step_length = 0.2
 step_height = 0.08
-forward_distance = 2.0  # distance to walk
+forward_distance = 3.0  # distance to walk
 
 # Use self-defined initial configuration
 use_init_conf = False
