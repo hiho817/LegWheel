@@ -63,6 +63,8 @@ def plot_leg_rp_overlay():
     plot_leg.leg_shape.get_shape(O)
 
     fig, ax = plt.subplots(figsize=(8, 8))
+    fig.patch.set_alpha(0)
+    ax.patch.set_alpha(0)
 
     arc_colors = {
         "upper_rim_r": "red",
@@ -161,7 +163,8 @@ def plot_leg_rp_overlay():
             fontfamily="Times New Roman", fontweight="bold", ha="right", va="center",
             rotation=90, clip_on=False, zorder=30)
 
-    plt.savefig(file_name + ".png", dpi=1000, bbox_inches="tight")
+    plt.savefig(file_name + ".png", dpi=1000, bbox_inches="tight", transparent=True)
+    plt.savefig(file_name + ".svg", bbox_inches="tight", transparent=True)
     plt.show()
 
 
